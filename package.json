@@ -1,0 +1,47 @@
+{
+  "name": "create-eminence-astro-starter",
+  "version": "0.0.0",
+  "description": "Create a minimal Astro project deployed to Cloudflare Workers.",
+  "type": "module",
+  "bin": {
+    "create-eminence-astro-starter": "./dist/index.js"
+  },
+  "files": [
+    "dist",
+    "templates",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts --format esm --dts --clean",
+    "changeset": "changeset",
+    "dev": "tsup src/index.ts --format esm --watch",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "release": "pnpm build && pnpm test && pnpm publish",
+    "smoke": "pnpm pack && node scripts/smoke-test.mjs",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "version": "changeset version"
+  },
+  "dependencies": {
+    "@clack/prompts": "^0.11.0",
+    "execa": "^9.6.0"
+  },
+  "devDependencies": {
+    "@changesets/changelog-github": "^0.5.1",
+    "@changesets/cli": "^2.29.7",
+    "@types/node": "^22.15.30",
+    "prettier": "^3.5.3",
+    "prettier-plugin-packagejson": "^2.5.15",
+    "tsup": "^8.5.0",
+    "typescript": "^5.8.3",
+    "vitest": "^3.1.3"
+  },
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
