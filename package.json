@@ -15,13 +15,11 @@
   "scripts": {
     "build": "tsup src/index.ts --format esm --dts --clean",
     "changeset": "changeset",
-    "dev": "tsup src/index.ts --format esm --watch",
+    "create-project": "tsx src/index.ts",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "release": "pnpm build && pnpm test && pnpm publish",
-    "smoke": "pnpm pack && node scripts/smoke-test.mjs",
     "test": "vitest run",
-    "test:watch": "vitest",
     "version": "changeset version"
   },
   "dependencies": {
@@ -35,6 +33,7 @@
     "prettier": "^3.5.3",
     "prettier-plugin-packagejson": "^2.5.15",
     "tsup": "^8.5.0",
+    "tsx": "^4.20.3",
     "typescript": "^5.8.3",
     "vitest": "^3.1.3"
   },

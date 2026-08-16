@@ -4,6 +4,7 @@ import { basename, resolve } from 'node:path';
 import { collectAnswers } from './prompts.js';
 import { commandsFor, detectPackageManager } from './package-manager.js';
 import { generateProject } from './scaffold.js';
+import { emptyDirectory, isNonEmptyDirectory } from './lib/files.js';
 
 function parseArgs(argv: string[]) {
   const values = argv.slice(2);
@@ -25,6 +26,22 @@ async function main() {
     return;
   }
   const target = resolve(process.cwd(), answers.projectName);
+  if (await isNonEmptyDirectory(target)) {
+    if (yes) {
+      p.log.error(`Target directory is not empty: ${target}`);
+      process.exitCode = 1;
+      return;
+    }
+    const empty = await p.confirm({
+      message: `Target directory is not empty. Empty it and continue?`,
+      initialValue: false,
+    });
+    if (p.isCancel(empty) || !empty) {
+      p.cancel('Cancelled. No files were changed.');
+      return;
+    }
+    await emptyDirectory(target);
+  }
   const spinner = p.spinner();
   try {
     spinner.start('Generating project');
@@ -38,12 +55,7 @@ async function main() {
     return;
   }
   const commands = commandsFor(answers.packageManager, basename(target));
-  if (!answers.install)
-    p.note(
-      `${commands.cd}\n${commands.install}\n${commands.dev}`,
-      'Next steps',
-    );
-  else p.note(`${commands.cd}\n${commands.dev}`, 'Next steps');
+  p.note(`${commands.cd}\n${commands.dev}`, 'Next steps');
   p.outro('Happy building.');
 }
 

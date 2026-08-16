@@ -1,11 +1,23 @@
 import * as p from '@clack/prompts';
-import type { Answers, Improvements, PackageManager } from './types.js';
+import type {
+  Adapter,
+  Answers,
+  Improvements,
+  PackageManager,
+} from './types.js';
 
 export const defaultImprovements: Improvements = {
   tailwind: true,
   prettier: true,
   githubLabels: true,
 };
+export const defaultProjectName = 'my-site-name';
+
+export function projectNameOrDefault(value: unknown): string {
+  return typeof value === 'string' && value.trim()
+    ? value.trim()
+    : defaultProjectName;
+}
 
 function cancelled(value: unknown): value is symbol {
   return p.isCancel(value);
@@ -31,12 +43,10 @@ export async function collectAnswers(options: {
   const projectName =
     options.name ??
     (options.yes
-      ? 'eminence-astro-site'
+      ? defaultProjectName
       : await p.text({
           message: 'Project name:',
-          placeholder: 'my-astro-site',
-          validate: (value) =>
-            value.trim() ? undefined : 'Project name is required.',
+          placeholder: defaultProjectName,
         }));
   if (cancelled(projectName)) return undefined;
   const selected = options.yes
@@ -51,6 +61,21 @@ export async function collectAnswers(options: {
         initialValues: Object.keys(defaultImprovements),
       });
   if (cancelled(selected)) return undefined;
+  const adapter = options.yes
+    ? 'cloudflare'
+    : ((await p.select({
+        message: 'Which deployment adapter should be configured?',
+        options: [
+          { value: 'none', label: 'None', hint: 'Static Astro site' },
+          {
+            value: 'cloudflare',
+            label: 'Cloudflare Workers',
+            hint: 'Server-rendered Astro site',
+          },
+        ],
+        initialValue: 'cloudflare',
+      })) as Adapter);
+  if (cancelled(adapter)) return undefined;
   const git = options.yes
     ? true
     : await p.confirm({
@@ -58,20 +83,16 @@ export async function collectAnswers(options: {
         initialValue: true,
       });
   if (cancelled(git)) return undefined;
-  const install = options.yes
-    ? true
-    : await p.confirm({ message: 'Install dependencies?', initialValue: true });
-  if (cancelled(install)) return undefined;
   const picks = new Set(selected as string[]);
   return {
-    projectName: String(projectName).trim(),
+    projectName: projectNameOrDefault(projectName),
     improvements: {
       tailwind: picks.has('tailwind'),
       prettier: picks.has('prettier'),
       githubLabels: picks.has('githubLabels'),
     },
+    adapter,
     git: Boolean(git),
-    install: Boolean(install),
     packageManager,
   };
 }

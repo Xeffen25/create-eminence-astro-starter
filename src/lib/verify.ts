@@ -20,5 +20,5 @@ export async function verifyProject(
       stdio: 'inherit',
     });
   await run('build');
-  if (hasPrettier) await run('format:check');
+  if (hasPrettier) await run('format');
 }

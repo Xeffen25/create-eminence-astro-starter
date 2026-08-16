@@ -9,9 +9,9 @@ import { writeNewFile } from '../lib/files.js';
 export async function addPrettier(directory: string) {
   await updatePackageJson(directory, (pkg) => {
     addDependencies(pkg, {
-      prettier: '^3.5.3',
-      'prettier-plugin-astro': '^0.14.1',
-      'prettier-plugin-tailwindcss': '^0.6.11',
+      prettier: 'latest',
+      'prettier-plugin-astro': 'latest',
+      'prettier-plugin-tailwindcss': 'latest',
     });
     addScripts(pkg, {
       format: 'prettier --write .',

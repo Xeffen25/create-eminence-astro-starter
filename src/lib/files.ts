@@ -1,4 +1,12 @@
-import { cp, lstat, mkdir, readFile, writeFile } from 'node:fs/promises';
+import {
+  cp,
+  lstat,
+  mkdir,
+  readFile,
+  readdir,
+  rm,
+  writeFile,
+} from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 
 export async function ensureEmptyDirectory(path: string) {
@@ -6,15 +14,35 @@ export async function ensureEmptyDirectory(path: string) {
     const stat = await lstat(path);
     if (!stat.isDirectory())
       throw new Error(`Target exists and is not a directory: ${path}`);
-    const entries = await import('node:fs/promises').then(({ readdir }) =>
-      readdir(path),
-    );
+    const entries = await readdir(path);
     if (entries.length)
       throw new Error(`Target directory is not empty: ${path}`);
   } catch (error: unknown) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') return;
     throw error;
   }
+}
+
+export async function isNonEmptyDirectory(path: string): Promise<boolean> {
+  try {
+    const stat = await lstat(path);
+    if (!stat.isDirectory()) return false;
+    return (await readdir(path)).length > 0;
+  } catch (error: unknown) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return false;
+    throw error;
+  }
+}
+
+export async function emptyDirectory(path: string) {
+  const stat = await lstat(path);
+  if (!stat.isDirectory())
+    throw new Error(`Target is not a directory: ${path}`);
+  await Promise.all(
+    (await readdir(path)).map((entry) =>
+      rm(join(path, entry), { recursive: true, force: true }),
+    ),
+  );
 }
 
 export async function copyTemplate(template: string, target: string) {

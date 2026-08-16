@@ -6,10 +6,12 @@ export type Improvements = {
   githubLabels: boolean;
 };
 
+export type Adapter = 'none' | 'cloudflare';
+
 export type Answers = {
   projectName: string;
   improvements: Improvements;
+  adapter: Adapter;
   git: boolean;
-  install: boolean;
   packageManager: PackageManager;
 };

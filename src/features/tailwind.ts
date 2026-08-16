@@ -6,8 +6,8 @@ import { addDependencies, updatePackageJson } from '../lib/package-json.js';
 export async function addTailwind(directory: string) {
   await updatePackageJson(directory, (pkg) =>
     addDependencies(pkg, {
-      '@tailwindcss/vite': '^4.1.0',
-      tailwindcss: '^4.1.0',
+      '@tailwindcss/vite': 'latest',
+      tailwindcss: 'latest',
     }),
   );
   const configPath = join(directory, 'astro.config.mjs');
