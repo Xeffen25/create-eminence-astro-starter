@@ -13,7 +13,7 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsup src/index.ts --format esm --dts --clean",
+    "build": "tsup src/index.ts --format esm --clean && tsc -p tsconfig.build.json",
     "changeset": "changeset",
     "create-project": "tsx src/index.ts",
     "format": "prettier --write .",
