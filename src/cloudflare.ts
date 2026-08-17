@@ -1,5 +1,4 @@
 import { join } from 'node:path';
-import { readFile, writeFile } from 'node:fs/promises';
 import { appendUniqueLines, writeNewFile } from './lib/files.js';
 import {
   addDependencies,
@@ -25,21 +24,6 @@ export async function addCloudflare(directory: string, projectName: string) {
       'cf-typegen': 'wrangler types',
     });
   });
-  const configPath = join(directory, 'astro.config.mjs');
-  const config = await readFile(configPath, 'utf8');
-  await writeFile(
-    configPath,
-    config
-      .replace(
-        "import { defineConfig } from 'astro/config';",
-        "import { defineConfig } from 'astro/config';\nimport cloudflare from '@astrojs/cloudflare';",
-      )
-      .replace(
-        "export default defineConfig({\n  output: 'static',\n});",
-        "export default defineConfig({\n  output: 'server',\n  adapter: cloudflare({\n    platformProxy: {\n      enabled: true,\n      configPath: 'wrangler.jsonc',\n      experimentalJsonConfig: true,\n    },\n  }),\n});",
-      ),
-    'utf8',
-  );
   await writeNewFile(
     join(directory, 'wrangler.jsonc'),
     `{
@@ -57,6 +41,10 @@ export async function addCloudflare(directory: string, projectName: string) {
   }
 }
 `,
+  );
+  await writeNewFile(
+    join(directory, 'public/.assetsignore'),
+    '_worker.js\n_routes.json\n',
   );
   await appendUniqueLines(join(directory, '.gitignore'), [
     '.wrangler/',

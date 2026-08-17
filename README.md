@@ -1,6 +1,6 @@
 # create-eminence-astro-starter
 
-Create a minimal, opinionated Astro 6 site configured for server-side rendering on Cloudflare Workers. The generator owns its template and never invokes `create-astro` or `create-cloudflare`.
+Create a minimal, opinionated Astro site configured for Cloudflare Workers or static hosting. The generator owns its template and never invokes `create-astro` or `create-cloudflare`.
 
 ## Requirements
 
@@ -18,9 +18,13 @@ pnpm create eminence-astro-starter my-site --yes
 
 For local generator development, run `pnpm create-project`. It executes the TypeScript source directly, so it always uses your latest edits without requiring a build. Use `pnpm create-project -- --yes` to generate the ignored `my-site-name/` test project without prompts. Run `pnpm build` before packing or publishing.
 
-The CLI asks once for the name, optional improvements (Tailwind CSS 4, Prettier, and GitHub label sync), deployment adapter, and Git. Choose no adapter for a static Astro site, or Cloudflare Workers for server rendering. Dependencies are always installed, then the generated project is built and formatted. When Git is selected, it creates an `Initialize Astro` commit and a second `Apply setup` commit. For an interactive run, a non-empty target prompts before its contents are removed; `--yes` never deletes an existing directory.
+The CLI asks once for the name, optional improvements, deployment adapter, frontend frameworks, language setup, and Git. Project names must be kebab-case (`my-site`); spaces and underscores become dashes after you submit. Every improvement is selected by default: Tailwind CSS 4, Prettier, Eminence Astro Suite, Vitest, Resend, GitHub label sync, and GitHub issue templates. Svelte is selected by default; add React too, or deselect both for no UI framework. Choose no adapter for a static Astro site, or Cloudflare Workers for server rendering.
 
-Generated projects use `dev` (also available as `start`), `build`, `preview`, `deploy`, and `cf-typegen`. Prettier projects also include `format` and `format:check`. `deploy` builds and runs Wrangler; authenticate first with `wrangler login`.
+The language step offers Spanish, English, French, Italian, Catalan, and German. Choose Paraglide for multilingual routing and select at least two languages, then choose the default. Without Paraglide, select the one static document language instead. The generated homepage contains a translated greeting for every selected language, and its base layout uses `lang={getLocale()}` only when Paraglide is enabled.
+
+Prettier projects include a formatting CI check. Vitest projects contain a passing starter test, test scripts, a CI test step, and—when Git is selected—a Husky pre-commit test. The hook also formats when Prettier is selected. Eminence Astro Suite is registered with basic `Head` metadata defaults. Resend projects contain `.env.example` and `TODO.md`, which explains setting `RESEND_API_KEY` locally and as a Cloudflare Worker secret. Generation starts from the official Astro minimal template, adds Astro as a production dependency with a resolved version, then overlays `templates/improved` (the `src` folder layout from eminence-astro-starter: `actions`, `assets`, `components`, `content`, `fonts`, `forms`, `lib`, and `types`) before applying selected prompt features. Dependencies are always installed, then the generated project is built and formatted without streaming those command logs. When Git is selected, it creates an `Initialize Astro` commit and a second `Apply setup` commit. For an interactive run, a non-empty target prompts before its contents are removed; `--yes` never deletes an existing directory.
+
+Generated projects use `dev`, `build`, `preview`, `deploy`, and `cf-typegen`. Prettier projects also include `format` and `format:check`. Cloudflare projects add `start` as an alias for `dev`. `deploy` builds and runs Wrangler; authenticate first with `wrangler login`.
 
 ## Label sync
 

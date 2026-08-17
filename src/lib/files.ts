@@ -58,6 +58,18 @@ export async function copyTemplate(template: string, target: string) {
   );
 }
 
+export async function copyDirectoryContents(source: string, target: string) {
+  await mkdir(target, { recursive: true });
+  await Promise.all(
+    (await readdir(source)).map((entry) =>
+      cp(join(source, entry), join(target, entry), {
+        recursive: true,
+        force: true,
+      }),
+    ),
+  );
+}
+
 export async function writeNewFile(path: string, contents: string) {
   await mkdir(dirname(path), { recursive: true });
   try {

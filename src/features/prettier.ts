@@ -24,6 +24,6 @@ export async function addPrettier(directory: string) {
   );
   await writeNewFile(
     join(directory, '.prettierignore'),
-    'node_modules\ndist\n.wrangler\n',
+    'node_modules\ndist\n.astro\n.wrangler\n',
   );
 }
