@@ -8,13 +8,13 @@ import {
   ensureEmptyDirectory,
   isNonEmptyDirectory,
 } from '../src/lib/files.js';
+import { generate as generatePnpmWorkspace } from '../src/files/pnpm-workspace.yaml.js';
 import {
   addDependencies,
   addScripts,
   type PackageJson,
   updatePackageJson,
 } from '../src/lib/package-json.js';
-import { pnpmWorkspaceYaml } from '../src/package-manager.js';
 import { generateProject, templateDirectory } from '../src/scaffold.js';
 import type { Answers } from '../src/types.js';
 
@@ -150,7 +150,7 @@ describe('generation', () => {
     const pnpm = join(root, 'pnpm-site');
     await generateProject(pnpm, base, skipInstall);
     expect(await readFile(join(pnpm, 'pnpm-workspace.yaml'), 'utf8')).toBe(
-      pnpmWorkspaceYaml,
+      generatePnpmWorkspace({ ...base, compatibilityDate: '2020-01-01' }),
     );
     for (const manager of ['npm', 'yarn', 'bun'] as const) {
       const target = join(root, `${manager}-site`);
@@ -442,11 +442,7 @@ describe('generation', () => {
       'stop:First commit',
       'start:Applying improvements',
       'message:Applying improved template',
-      'message:Applying Language',
-      'message:Applying Cloudflare Workers',
-      'message:Applying Tailwind CSS',
-      'message:Applying CI',
-      'message:Updating Astro config',
+      'message:Writing files',
       'stop:Applied improvements',
       'start:Installing dependencies',
       'stop:Installed dependencies',

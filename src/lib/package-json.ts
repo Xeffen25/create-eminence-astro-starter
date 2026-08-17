@@ -35,3 +35,21 @@ export function addDependencies(
 export function addScripts(pkg: PackageJson, scripts: Record<string, string>) {
   pkg.scripts = { ...pkg.scripts, ...scripts };
 }
+
+export function mergePackageJson(
+  existing: PackageJson,
+  generated: PackageJson,
+): PackageJson {
+  return {
+    ...generated,
+    dependencies: {
+      ...generated.dependencies,
+      ...existing.dependencies,
+    },
+    devDependencies: {
+      ...generated.devDependencies,
+      ...existing.devDependencies,
+    },
+    scripts: { ...existing.scripts, ...generated.scripts },
+  };
+}

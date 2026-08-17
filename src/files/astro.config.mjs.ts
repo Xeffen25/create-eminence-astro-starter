@@ -1,28 +1,28 @@
-import { writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
-import type { Answers } from './types.js';
+import type { ProjectInput } from '../types.js';
 
-export async function writeAstroConfig(directory: string, answers: Answers) {
+export const path = 'astro.config.mjs';
+
+export function generate(input: ProjectInput): string {
   const imports = ["import { defineConfig } from 'astro/config';"];
-  if (answers.adapter === 'cloudflare')
+  if (input.adapter === 'cloudflare')
     imports.push("import cloudflare from '@astrojs/cloudflare';");
-  for (const framework of answers.frameworks)
+  for (const framework of input.frameworks)
     imports.push(`import ${framework} from '@astrojs/${framework}';`);
-  if (answers.improvements.tailwind)
+  if (input.improvements.tailwind)
     imports.push("import tailwindcss from '@tailwindcss/vite';");
-  if (answers.language.paraglide)
+  if (input.language.paraglide)
     imports.push("import { paraglideVitePlugin } from '@inlang/paraglide-js';");
-  if (answers.improvements.eminenceAstroSuite)
+  if (input.improvements.eminenceAstroSuite)
     imports.push("import eminence from 'eminence-astro-suite';");
 
   const integrations = [
-    ...answers.frameworks.map((framework) => `${framework}()`),
-    ...(answers.improvements.eminenceAstroSuite
+    ...input.frameworks.map((framework) => `${framework}()`),
+    ...(input.improvements.eminenceAstroSuite
       ? [
           `eminence({
       headTags: {
-        titleTemplate: ${JSON.stringify(`%s | ${answers.projectName}`)},
-        openGraphSiteName: ${JSON.stringify(answers.projectName)},
+        titleTemplate: ${JSON.stringify(`%s | ${input.projectName}`)},
+        openGraphSiteName: ${JSON.stringify(input.projectName)},
         humansTxt: false,
       },
       icons: false,
@@ -35,17 +35,17 @@ export async function writeAstroConfig(directory: string, answers: Answers) {
       : []),
   ];
   const vitePlugins: string[] = [];
-  if (answers.improvements.tailwind) vitePlugins.push('tailwindcss()');
-  if (answers.language.paraglide)
+  if (input.improvements.tailwind) vitePlugins.push('tailwindcss()');
+  if (input.language.paraglide)
     vitePlugins.push(`paraglideVitePlugin({
       project: './project.inlang',
       outdir: './src/paraglide',
       emitTsDeclarations: false,
     })`);
 
-  const output = answers.adapter === 'cloudflare' ? 'server' : 'static';
+  const output = input.adapter === 'cloudflare' ? 'server' : 'static';
   const properties = [`output: ${JSON.stringify(output)}`];
-  if (answers.adapter === 'cloudflare')
+  if (input.adapter === 'cloudflare')
     properties.push(`adapter: cloudflare({
     platformProxy: {
       enabled: true,
@@ -53,10 +53,10 @@ export async function writeAstroConfig(directory: string, answers: Answers) {
       experimentalJsonConfig: true,
     },
   })`);
-  if (answers.language.paraglide && answers.adapter === 'none')
+  if (input.language.paraglide && input.adapter === 'none')
     properties.push(`i18n: {
-    defaultLocale: ${JSON.stringify(answers.language.defaultLanguage)},
-    locales: ${JSON.stringify(answers.language.languages)},
+    defaultLocale: ${JSON.stringify(input.language.defaultLanguage)},
+    locales: ${JSON.stringify(input.language.languages)},
   }`);
   properties.push(`integrations: [${integrations.join(', ')}]`);
   if (vitePlugins.length)
@@ -64,9 +64,5 @@ export async function writeAstroConfig(directory: string, answers: Answers) {
     plugins: [${vitePlugins.join(', ')}],
   }`);
 
-  await writeFile(
-    join(directory, 'astro.config.mjs'),
-    `${imports.join('\n')}\n\nexport default defineConfig({\n  ${properties.join(',\n  ')},\n});\n`,
-    'utf8',
-  );
+  return `${imports.join('\n')}\n\nexport default defineConfig({\n  ${properties.join(',\n  ')},\n});\n`;
 }

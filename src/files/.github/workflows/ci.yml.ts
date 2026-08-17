@@ -1,6 +1,6 @@
-import { join } from 'node:path';
-import { writeNewFile } from '../lib/files.js';
-import type { PackageManager } from '../types.js';
+import type { PackageManager, ProjectInput } from '../../../types.js';
+
+export const path = '.github/workflows/ci.yml';
 
 function installCommand(packageManager: PackageManager) {
   if (packageManager === 'npm') return 'npm ci';
@@ -17,35 +17,24 @@ function runCommand(packageManager: PackageManager, script: string) {
       : `${packageManager} ${script}`;
 }
 
-export async function addCi(
-  directory: string,
-  options: {
-    prettier: boolean;
-    vitest: boolean;
-    packageManager: PackageManager;
-  },
-) {
+export function generate(input: ProjectInput): string {
   const setup =
-    options.packageManager === 'pnpm'
+    input.packageManager === 'pnpm'
       ? `      - uses: pnpm/action-setup@v4
         with:
           version: 10
 `
-      : options.packageManager === 'bun'
+      : input.packageManager === 'bun'
         ? '      - uses: oven-sh/setup-bun@v2\n'
         : '';
   const checks = [
-    ...(options.prettier ? ['format:check'] : []),
-    ...(options.vitest ? ['test'] : []),
+    ...(input.improvements.prettier ? ['format:check'] : []),
+    ...(input.improvements.vitest ? ['test'] : []),
     'build',
   ]
-    .map(
-      (script) => `      - run: ${runCommand(options.packageManager, script)}`,
-    )
+    .map((script) => `      - run: ${runCommand(input.packageManager, script)}`)
     .join('\n');
-  await writeNewFile(
-    join(directory, '.github/workflows/ci.yml'),
-    `name: CI
+  return `name: CI
 
 on:
   pull_request:
@@ -60,9 +49,8 @@ jobs:
 ${setup}      - uses: actions/setup-node@v4
         with:
           node-version: 24
-          ${options.packageManager === 'pnpm' ? 'cache: pnpm' : ''}
-      - run: ${installCommand(options.packageManager)}
+          ${input.packageManager === 'pnpm' ? 'cache: pnpm' : ''}
+      - run: ${installCommand(input.packageManager)}
 ${checks}
-`,
-  );
+`;
 }

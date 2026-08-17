@@ -30,6 +30,16 @@ export type Answers = {
   packageManager: PackageManager;
 };
 
+export type ProjectInput = Answers & {
+  compatibilityDate: string;
+};
+
+export type FileModule = {
+  path: string;
+  generate: (input: ProjectInput) => string | undefined;
+  mode?: number;
+};
+
 export type Reporter = {
   start(message: string): void;
   message(message: string): void;
