@@ -4,7 +4,7 @@ Create a minimal, opinionated Astro 6 site configured for server-side rendering 
 
 ## Requirements
 
-Node.js 20.19+ and one of pnpm, npm, Yarn, or Bun. A Cloudflare account is needed only to deploy.
+Node.js 24+ (current LTS) and one of pnpm, npm, Yarn, or Bun. A Cloudflare account is needed only to deploy.
 
 ## Usage
 

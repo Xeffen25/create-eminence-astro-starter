@@ -47,11 +47,15 @@ export async function emptyDirectory(path: string) {
 
 export async function copyTemplate(template: string, target: string) {
   await mkdir(target, { recursive: true });
-  await cp(template, target, {
-    recursive: true,
-    force: false,
-    errorOnExist: true,
-  });
+  await Promise.all(
+    (await readdir(template)).map((entry) =>
+      cp(join(template, entry), join(target, entry), {
+        recursive: true,
+        force: false,
+        errorOnExist: true,
+      }),
+    ),
+  );
 }
 
 export async function writeNewFile(path: string, contents: string) {
