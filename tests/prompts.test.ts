@@ -67,5 +67,6 @@ describe('kebab-case project names', () => {
     expect(projectNameError('foo!bar')).toBe(kebabCaseNameError);
     expect(projectNameError('My Site')).toBeUndefined();
     expect(projectNameError('')).toBeUndefined();
+    expect(projectNameError(undefined)).toBeUndefined();
   });
 });

@@ -54,8 +54,10 @@ export function projectNameOrDefault(value: unknown): string {
     : defaultProjectName;
 }
 
-export function projectNameError(value: string): string | undefined {
-  if (!value.trim()) return undefined;
+export function projectNameError(
+  value: string | undefined,
+): string | undefined {
+  if (!value?.trim()) return undefined;
   if (!isKebabCaseName(toKebabCaseName(value))) return kebabCaseNameError;
 }
 
