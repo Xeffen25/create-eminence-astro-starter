@@ -1,5 +1,6 @@
 import type { Language, ProjectInput } from '../types.js';
 import { greetings } from './greetings.js';
+import { siteDescriptions, skipToContent } from './languages.js';
 
 export function generateMessageFile(
   locale: Language,
@@ -10,7 +11,10 @@ export function generateMessageFile(
   return `${JSON.stringify(
     {
       $schema: 'https://inlang.com/schema/inlang-message-format',
-      home_greeting: greetings[locale],
+      index_title: input.projectName,
+      index_description: siteDescriptions[locale],
+      index_h1: greetings[locale],
+      layout_skip_to_content: skipToContent[locale],
     },
     null,
     2,

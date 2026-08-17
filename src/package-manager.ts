@@ -11,14 +11,29 @@ export function detectPackageManager(
   return undefined;
 }
 
+export function runScript(manager: PackageManager, script: string) {
+  return manager === 'npm' ? `npm run ${script}` : `${manager} ${script}`;
+}
+
+export function astroCommand(manager: PackageManager, args: string) {
+  return manager === 'npm'
+    ? `npm run astro -- ${args}`
+    : `${manager} astro ${args}`;
+}
+
+export function ciInstallCommand(manager: PackageManager) {
+  if (manager === 'npm') return 'npm ci';
+  if (manager === 'yarn') return 'yarn install --immutable';
+  if (manager === 'bun') return 'bun install --frozen-lockfile';
+  return 'pnpm install';
+}
+
 export function commandsFor(manager: PackageManager, projectName: string) {
-  const run = (script: string) =>
-    manager === 'npm' ? `npm run ${script}` : `${manager} ${script}`;
   return {
     install: manager === 'npm' ? 'npm install' : `${manager} install`,
-    dev: run('dev'),
-    build: run('build'),
-    deploy: run('deploy'),
+    dev: runScript(manager, 'dev'),
+    build: runScript(manager, 'build'),
+    deploy: runScript(manager, 'deploy'),
     cd: `cd ${projectName}`,
   };
 }

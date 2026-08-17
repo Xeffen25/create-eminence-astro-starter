@@ -1,64 +1,71 @@
+import { defaultSite, isDefaultSite } from '../lib/site.js';
 import type { ProjectInput } from '../types.js';
 
 export const path = 'astro.config.mjs';
 
 export function generate(input: ProjectInput): string {
-  const imports = ["import { defineConfig } from 'astro/config';"];
+  const imports = [
+    "import { defineConfig, fontProviders } from 'astro/config';",
+  ];
+  if (input.language.paraglide)
+    imports.push("import { paraglideVitePlugin } from '@inlang/paraglide-js';");
   if (input.adapter === 'cloudflare')
     imports.push("import cloudflare from '@astrojs/cloudflare';");
   for (const framework of input.frameworks)
     imports.push(`import ${framework} from '@astrojs/${framework}';`);
   if (input.improvements.tailwind)
     imports.push("import tailwindcss from '@tailwindcss/vite';");
-  if (input.language.paraglide)
-    imports.push("import { paraglideVitePlugin } from '@inlang/paraglide-js';");
   if (input.improvements.eminenceAstroSuite)
     imports.push("import eminence from 'eminence-astro-suite';");
+  if (input.improvements.sitemap && !input.improvements.eminenceAstroSuite)
+    imports.push("import sitemap from '@astrojs/sitemap';");
 
-  const integrations = [
-    ...input.frameworks.map((framework) => `${framework}()`),
-    ...(input.improvements.eminenceAstroSuite
-      ? [
-          `eminence({
-      headTags: {
-        titleTemplate: ${JSON.stringify(`%s | ${input.projectName}`)},
-        openGraphSiteName: ${JSON.stringify(input.projectName)},
-        humansTxt: false,
-      },
-      icons: false,
-      manifest: false,
-      robotsTxt: false,
-      securityTxt: false,
-      sitemap: false,
-    })`,
-        ]
-      : []),
-  ];
+  const integrations: string[] = [];
+  if (input.improvements.eminenceAstroSuite)
+    integrations.push(
+      input.improvements.sitemap
+        ? 'eminence()'
+        : 'eminence({ sitemap: false })',
+    );
+  else if (input.improvements.sitemap) integrations.push('sitemap()');
+  for (const framework of input.frameworks) integrations.push(`${framework}()`);
+
   const vitePlugins: string[] = [];
-  if (input.improvements.tailwind) vitePlugins.push('tailwindcss()');
   if (input.language.paraglide)
     vitePlugins.push(`paraglideVitePlugin({
       project: './project.inlang',
       outdir: './src/paraglide',
-      emitTsDeclarations: false,
+      strategy: ['url', 'baseLocale'],
+      emitGitIgnore: true,
+      emitPrettierIgnore: true,
     })`);
+  if (input.improvements.tailwind) vitePlugins.push('tailwindcss()');
 
   const output = input.adapter === 'cloudflare' ? 'server' : 'static';
-  const properties = [`output: ${JSON.stringify(output)}`];
-  if (input.adapter === 'cloudflare')
-    properties.push(`adapter: cloudflare({
-    platformProxy: {
-      enabled: true,
-      configPath: 'wrangler.jsonc',
-      experimentalJsonConfig: true,
+  const properties: string[] = [];
+  if (isDefaultSite(input.site))
+    properties.push(
+      `// TODO: replace with the production URL\n  // site: ${JSON.stringify(defaultSite)}`,
+    );
+  else properties.push(`site: ${JSON.stringify(input.site)}`);
+  if (input.adapter === 'cloudflare') properties.push('adapter: cloudflare()');
+  properties.push(`output: ${JSON.stringify(output)}`);
+  properties.push(`fonts: [
+    {
+      provider: fontProviders.google(),
+      name: 'Inter',
+      cssVariable: '--astro-font-inter',
+      weights: ['100 900'],
+      styles: ['normal', 'italic'],
     },
-  })`);
+  ]`);
   if (input.language.paraglide && input.adapter === 'none')
     properties.push(`i18n: {
     defaultLocale: ${JSON.stringify(input.language.defaultLanguage)},
     locales: ${JSON.stringify(input.language.languages)},
   }`);
   properties.push(`integrations: [${integrations.join(', ')}]`);
+
   if (vitePlugins.length)
     properties.push(`vite: {
     plugins: [${vitePlugins.join(', ')}],

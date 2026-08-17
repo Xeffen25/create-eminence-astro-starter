@@ -3,15 +3,24 @@ import type { PackageManager, ProjectInput } from '../../types.js';
 export const path = '.husky/pre-commit';
 export const mode = 0o755;
 
-function command(manager: PackageManager, script: string) {
-  return manager === 'npm' ? `npm run ${script}` : `${manager} ${script}`;
+function execCommand(manager: PackageManager, binary: string) {
+  if (manager === 'npm') return `npm exec ${binary}`;
+  if (manager === 'bun') return `bunx ${binary}`;
+  return `${manager} exec ${binary}`;
+}
+
+function testCommand(manager: PackageManager) {
+  return manager === 'npm' ? 'npm test' : `${manager} test`;
 }
 
 export function generate(input: ProjectInput): string | undefined {
-  const scripts = [
-    ...(input.improvements.prettier ? ['format'] : []),
-    ...(input.improvements.vitest ? ['test'] : []),
+  if (!input.git) return;
+  const lines = [
+    ...(input.improvements.prettier
+      ? [execCommand(input.packageManager, 'lint-staged')]
+      : []),
+    ...(input.improvements.vitest ? [testCommand(input.packageManager)] : []),
   ];
-  if (!input.git || !scripts.length) return;
-  return `${scripts.map((script) => command(input.packageManager, script)).join('\n')}\n`;
+  if (!lines.length) return;
+  return `${lines.join('\n')}\n`;
 }

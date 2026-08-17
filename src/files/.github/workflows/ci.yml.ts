@@ -1,56 +1,63 @@
-import type { PackageManager, ProjectInput } from '../../../types.js';
+import {
+  astroCommand,
+  ciInstallCommand,
+  runScript,
+} from '../../../package-manager.js';
+import type { ProjectInput } from '../../../types.js';
 
 export const path = '.github/workflows/ci.yml';
 
-function installCommand(packageManager: PackageManager) {
-  if (packageManager === 'npm') return 'npm ci';
-  if (packageManager === 'yarn') return 'yarn install --immutable';
-  if (packageManager === 'bun') return 'bun install --frozen-lockfile';
-  return 'pnpm install --frozen-lockfile';
-}
-
-function runCommand(packageManager: PackageManager, script: string) {
-  return packageManager === 'npm'
-    ? `npm run ${script}`
-    : packageManager === 'bun'
-      ? `bun run ${script}`
-      : `${packageManager} ${script}`;
-}
-
 export function generate(input: ProjectInput): string {
-  const setup =
-    input.packageManager === 'pnpm'
-      ? `      - uses: pnpm/action-setup@v4
+  const run = (script: string) => runScript(input.packageManager, script);
+  const setup: string[] = [];
+  if (input.packageManager === 'pnpm')
+    setup.push(`      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
         with:
-          version: 10
-`
-      : input.packageManager === 'bun'
-        ? '      - uses: oven-sh/setup-bun@v2\n'
-        : '';
-  const checks = [
-    ...(input.improvements.prettier ? ['format:check'] : []),
-    ...(input.improvements.vitest ? ['test'] : []),
-    'build',
-  ]
-    .map((script) => `      - run: ${runCommand(input.packageManager, script)}`)
-    .join('\n');
+          version: 11`);
+  else if (input.packageManager === 'bun')
+    setup.push(`      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2`);
+  const nodeCache =
+    input.packageManager === 'bun'
+      ? ''
+      : `\n          cache: ${input.packageManager}`;
+  const checks: string[] = [];
+  if (input.improvements.prettier)
+    checks.push(`      - name: Format check
+        run: ${run('format:check')}`);
+  if (input.adapter === 'cloudflare')
+    checks.push(`      - name: Generate Cloudflare types
+        run: ${run('generate-types')}`);
+  checks.push(`      - name: Astro check
+        run: ${astroCommand(input.packageManager, 'check')}`);
+  if (input.improvements.vitest)
+    checks.push(`      - name: Run tests
+        run: ${run('test')}`);
   return `name: CI
 
 on:
-  pull_request:
   push:
-    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
 
 jobs:
-  checks:
+  check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-${setup}      - uses: actions/setup-node@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+
+${setup.length ? `${setup.join('\n\n')}\n\n` : ''}      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
-          node-version: 24
-          ${input.packageManager === 'pnpm' ? 'cache: pnpm' : ''}
-      - run: ${installCommand(input.packageManager)}
-${checks}
+          node-version: 24${nodeCache}
+
+      - name: Install dependencies
+        run: ${ciInstallCommand(input.packageManager)}
+
+${checks.join('\n\n')}
 `;
 }

@@ -1,4 +1,10 @@
 import * as p from '@clack/prompts';
+import {
+  defaultSite,
+  isDefaultSite,
+  siteError,
+  siteOrDefault,
+} from './lib/site.js';
 import type {
   Adapter,
   Answers,
@@ -8,6 +14,13 @@ import type {
   PackageManager,
 } from './types.js';
 
+export {
+  defaultSite,
+  isDefaultSite,
+  siteError,
+  siteOrDefault,
+} from './lib/site.js';
+
 export const defaultImprovements: Improvements = {
   tailwind: true,
   prettier: true,
@@ -15,6 +28,7 @@ export const defaultImprovements: Improvements = {
   issueTemplates: true,
   vitest: true,
   eminenceAstroSuite: true,
+  sitemap: true,
   resend: true,
 };
 export const defaultProjectName = 'my-site-name';
@@ -106,6 +120,11 @@ export async function collectAnswers(options: {
             hint: 'SEO and metadata defaults',
           },
           {
+            value: 'sitemap',
+            label: 'Sitemap',
+            hint: 'XML sitemap via @astrojs/sitemap',
+          },
+          {
             value: 'vitest',
             label: 'Vitest',
             hint: 'Starter test and scripts',
@@ -136,6 +155,25 @@ export async function collectAnswers(options: {
         initialValue: 'cloudflare',
       })) as Adapter);
   if (cancelled(adapter)) return undefined;
+  const site = options.yes
+    ? defaultSite
+    : await p.text({
+        message: 'Production site URL:',
+        placeholder: defaultSite,
+        defaultValue: defaultSite,
+        validate: siteError,
+      });
+  if (cancelled(site)) return undefined;
+  const siteUrl = siteOrDefault(site);
+  let workersDev = adapter === 'cloudflare' && isDefaultSite(siteUrl);
+  if (adapter === 'cloudflare' && !isDefaultSite(siteUrl) && !options.yes) {
+    const workersDevAnswer = await p.confirm({
+      message: 'Enable the workers.dev subdomain?',
+      initialValue: false,
+    });
+    if (cancelled(workersDevAnswer)) return undefined;
+    workersDev = Boolean(workersDevAnswer);
+  }
   const frameworks = options.yes
     ? ['svelte']
     : await p.multiselect({
@@ -215,6 +253,7 @@ export async function collectAnswers(options: {
       issueTemplates: picks.has('issueTemplates'),
       vitest: picks.has('vitest'),
       eminenceAstroSuite: picks.has('eminenceAstroSuite'),
+      sitemap: picks.has('sitemap'),
       resend: picks.has('resend'),
     },
     adapter,
@@ -226,5 +265,7 @@ export async function collectAnswers(options: {
     },
     git: Boolean(git),
     packageManager,
+    site: siteUrl,
+    workersDev,
   };
 }

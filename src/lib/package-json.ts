@@ -5,6 +5,7 @@ export type PackageJson = Record<string, unknown> & {
   dependencies?: Record<string, string>;
   devDependencies?: Record<string, string>;
   scripts?: Record<string, string>;
+  'lint-staged'?: Record<string, string>;
 };
 
 export async function readPackageJson(directory: string): Promise<PackageJson> {
@@ -40,16 +41,22 @@ export function mergePackageJson(
   existing: PackageJson,
   generated: PackageJson,
 ): PackageJson {
-  return {
+  const dependencies = {
+    ...generated.dependencies,
+    ...existing.dependencies,
+  };
+  const devDependencies = {
+    ...generated.devDependencies,
+    ...existing.devDependencies,
+  };
+  const merged: PackageJson = {
     ...generated,
-    dependencies: {
-      ...generated.dependencies,
-      ...existing.dependencies,
-    },
-    devDependencies: {
-      ...generated.devDependencies,
-      ...existing.devDependencies,
-    },
     scripts: { ...existing.scripts, ...generated.scripts },
   };
+  if (Object.keys(dependencies).length) merged.dependencies = dependencies;
+  else delete merged.dependencies;
+  if (Object.keys(devDependencies).length)
+    merged.devDependencies = devDependencies;
+  else delete merged.devDependencies;
+  return merged;
 }

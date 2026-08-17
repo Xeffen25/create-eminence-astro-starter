@@ -1,79 +1,104 @@
-import type { Framework, ProjectInput } from '../types.js';
+import { runScript } from '../package-manager.js';
 import type { PackageJson } from '../lib/package-json.js';
-
-const frameworkDependencies: Record<Framework, Record<string, string>> = {
-  svelte: { '@astrojs/svelte': 'latest', svelte: 'latest' },
-  react: { '@astrojs/react': 'latest', react: 'latest', 'react-dom': 'latest' },
-};
+import type { ProjectInput } from '../types.js';
 
 export const path = 'package.json';
 
+export function usesHusky(input: ProjectInput): boolean {
+  return (
+    input.git && (input.improvements.prettier || input.improvements.vitest)
+  );
+}
+
+export function packagesToAdd(input: ProjectInput): {
+  dependencies: string[];
+  devDependencies: string[];
+} {
+  const dependencies: string[] = [];
+  const devDependencies: string[] = [
+    '@astrojs/check',
+    'typescript',
+    '@types/node',
+  ];
+  if (input.improvements.eminenceAstroSuite) {
+    dependencies.push('eminence-astro-suite');
+    devDependencies.push('schema-dts');
+  }
+  if (input.improvements.resend) dependencies.push('resend');
+  if (input.language.paraglide)
+    devDependencies.push('@inlang/paraglide-js', '@inlang/cli');
+  if (input.adapter === 'cloudflare') {
+    dependencies.push('@astrojs/cloudflare');
+    devDependencies.push('wrangler');
+  }
+  for (const framework of input.frameworks) {
+    if (framework === 'svelte') dependencies.push('@astrojs/svelte', 'svelte');
+    if (framework === 'react')
+      dependencies.push('@astrojs/react', 'react', 'react-dom');
+  }
+  if (input.improvements.tailwind)
+    dependencies.push('@tailwindcss/vite', 'tailwindcss');
+  if (input.improvements.sitemap) dependencies.push('@astrojs/sitemap');
+  if (input.improvements.prettier) {
+    devDependencies.push(
+      'prettier',
+      'prettier-plugin-astro',
+      'prettier-plugin-organize-imports',
+    );
+    if (input.frameworks.includes('svelte'))
+      devDependencies.push('prettier-plugin-svelte');
+  }
+  if (input.improvements.vitest) devDependencies.push('vitest');
+  if (usesHusky(input)) {
+    devDependencies.push('husky');
+    if (input.improvements.prettier) devDependencies.push('lint-staged');
+  }
+  return { dependencies, devDependencies };
+}
+
 export function generate(input: ProjectInput): string {
-  const dependencies: Record<string, string> = { astro: 'latest' };
-  const devDependencies: Record<string, string> = {};
+  const run = (script: string) => runScript(input.packageManager, script);
   const scripts: Record<string, string> = {
     dev: 'astro dev',
     build: 'astro build',
-    preview: 'astro preview',
+    preview: 'astro build && astro preview',
     astro: 'astro',
   };
-  if (input.improvements.eminenceAstroSuite)
-    dependencies['eminence-astro-suite'] = 'latest';
-  if (input.improvements.resend) dependencies.resend = 'latest';
-  if (input.language.paraglide)
-    devDependencies['@inlang/paraglide-js'] = 'latest';
   if (input.adapter === 'cloudflare') {
-    devDependencies['@astrojs/cloudflare'] = 'latest';
-    devDependencies.wrangler = 'latest';
-    Object.assign(scripts, {
-      start: 'astro dev',
-      preview: 'wrangler dev',
-      deploy: 'astro build && wrangler deploy',
-      'cf-typegen': 'wrangler types',
-    });
+    scripts['generate-types'] = 'wrangler types';
+    scripts.deploy = 'astro build && wrangler deploy';
   }
-  for (const framework of input.frameworks)
-    Object.assign(devDependencies, frameworkDependencies[framework]);
-  if (input.improvements.tailwind)
-    Object.assign(devDependencies, {
-      '@tailwindcss/vite': 'latest',
-      tailwindcss: 'latest',
-    });
   if (input.improvements.prettier) {
-    Object.assign(devDependencies, {
-      prettier: 'latest',
-      'prettier-plugin-astro': 'latest',
-      'prettier-plugin-tailwindcss': 'latest',
-    });
-    Object.assign(scripts, {
-      format: 'prettier --write .',
-      'format:check': 'prettier --check .',
-    });
+    scripts.format = 'prettier . --write';
+    scripts['format:check'] = 'prettier . --check';
   }
   if (input.improvements.vitest) {
-    devDependencies.vitest = 'latest';
-    Object.assign(scripts, {
-      test: 'vitest run',
-      'test:watch': 'vitest',
-    });
+    scripts.test = 'vitest run';
+    scripts['test:watch'] = 'vitest watch';
   }
-  const huskyScripts = [
-    ...(input.improvements.prettier ? ['format'] : []),
-    ...(input.improvements.vitest ? ['test'] : []),
-  ];
-  if (input.git && huskyScripts.length) {
-    devDependencies.husky = 'latest';
-    scripts.prepare = 'husky';
-  }
+  scripts['github:ci'] = [
+    ...(input.improvements.prettier ? [run('format:check')] : []),
+    'astro check',
+    ...(input.improvements.vitest ? [run('test')] : []),
+  ].join(' && ');
+  scripts.all = [
+    ...(input.improvements.prettier ? [run('format')] : []),
+    ...(input.adapter === 'cloudflare' ? [run('generate-types')] : []),
+    'astro check',
+    ...(input.improvements.vitest ? [run('test')] : []),
+    run('build'),
+  ].join(' && ');
+  if (input.language.paraglide)
+    scripts['machine-translate'] =
+      'inlang machine translate --project project.inlang';
   const pkg: PackageJson = {
     name: input.projectName,
     type: 'module',
-    version: '0.0.1',
+    version: '1.0.0',
     engines: { node: '>=22.12.0' },
     scripts,
-    dependencies,
   };
-  if (Object.keys(devDependencies).length)
-    pkg.devDependencies = devDependencies;
+  if (input.improvements.prettier)
+    pkg['lint-staged'] = { '*': 'prettier --write' };
   return `${JSON.stringify(pkg, null, 2)}\n`;
 }

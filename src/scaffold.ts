@@ -28,7 +28,7 @@ function basePackageJson(name: string) {
     {
       name,
       type: 'module',
-      version: '0.0.1',
+      version: '1.0.0',
       engines: { node: '>=22.12.0' },
       scripts: {
         dev: 'astro dev',
@@ -104,12 +104,14 @@ export async function generateProject(
   await (options.install ?? installDependencies)(
     target,
     answers.packageManager,
+    input,
   );
   await (options.verify ?? verifyProject)(
     target,
     answers.packageManager,
     answers.improvements.prettier,
     answers.improvements.vitest,
+    answers.adapter === 'cloudflare',
   );
   report.stop('Installed dependencies');
   if (answers.git) {

@@ -34,6 +34,7 @@ const base: Answers = {
     issueTemplates: false,
     vitest: false,
     eminenceAstroSuite: false,
+    sitemap: false,
     resend: false,
   },
   adapter: 'cloudflare',
@@ -44,6 +45,8 @@ const base: Answers = {
     defaultLanguage: 'en',
   },
   git: false,
+  site: 'https://example.com',
+  workersDev: false,
 };
 async function addAstro(directory: string) {
   await updatePackageJson(directory, (pkg) => {
@@ -118,17 +121,24 @@ describe('generation', () => {
     expect(await readFile(join(target, '.gitignore'), 'utf8')).toContain(
       '.idea/',
     );
+    expect(await readFile(join(target, '.gitignore'), 'utf8')).toContain(
+      '.wrangler/',
+    );
+    expect(await readFile(join(target, '.gitignore'), 'utf8')).not.toContain(
+      'src/paraglide/*',
+    );
     for (const path of [
-      'src/assets/.gitkeep',
-      'src/assets/flags/.gitkeep',
-      'src/components/.gitkeep',
-      'src/content/.gitkeep',
-      'src/fonts/.gitkeep',
-      'src/forms/.gitkeep',
-      'src/lib/.gitkeep',
-      'src/types/.gitkeep',
+      'src/assets/flags/ca.svg',
+      'src/assets/flags/de.svg',
+      'src/assets/flags/es.svg',
+      'src/assets/flags/fr.svg',
+      'src/assets/flags/gb.svg',
+      'src/assets/flags/it.svg',
     ])
-      expect(await readFile(join(target, path), 'utf8')).toBe('');
+      expect(await readFile(join(target, path), 'utf8')).toBeTruthy();
+    expect(
+      await readFile(join(target, 'src/components/Fonts.astro'), 'utf8'),
+    ).toContain('astro:assets');
     expect(
       await readFile(join(target, 'src/actions/index.ts'), 'utf8'),
     ).toContain('export const server');
@@ -136,6 +146,7 @@ describe('generation', () => {
       await readFile(join(target, 'package.json'), 'utf8'),
     ) as PackageJson;
     expect(pkg.name).toBe('my-site');
+    expect(pkg.version).toBe('1.0.0');
     expect(pkg.dependencies?.astro).toBe('^7.2.2');
     expect(pkg.devDependencies?.astro).toBeUndefined();
     await expect(
@@ -170,7 +181,7 @@ describe('generation', () => {
       include: ['.astro/types.d.ts', '**/*', './worker-configuration.d.ts'],
       exclude: ['dist'],
       compilerOptions: {
-        types: ['./worker-configuration.d.ts'],
+        types: ['./worker-configuration.d.ts', 'node'],
         paths: {
           '@/*': ['./src/*'],
           '~/*': ['./public/*'],
@@ -201,12 +212,46 @@ describe('generation', () => {
     const wrangler = await readFile(join(target, 'wrangler.jsonc'), 'utf8');
     expect(wrangler).toContain('@astrojs/cloudflare/entrypoints/server');
     expect(wrangler).toContain('"compatibility_date": "2020-01-01"');
+    expect(wrangler).toContain('"workers_dev": true');
+    expect(wrangler).not.toContain('"route"');
     expect(await readFile(join(target, 'package.json'), 'utf8')).toContain(
-      'wrangler',
+      'generate-types',
     );
+    expect(await readFile(join(target, 'src/env.d.ts'), 'utf8')).toContain(
+      'interface Locals',
+    );
+    await expect(
+      readFile(join(target, 'svelte.config.js'), 'utf8'),
+    ).rejects.toMatchObject({ code: 'ENOENT' });
     expect(
       await readFile(join(target, 'public/.assetsignore'), 'utf8'),
     ).toContain('_worker.js');
+    expect(
+      await readFile(join(target, 'src/components/Fonts.astro'), 'utf8'),
+    ).toContain('astro:assets');
+    expect(await readFile(join(target, 'TODO.md'), 'utf8')).toContain(
+      'LICENSE.md',
+    );
+    expect(await readFile(join(target, 'TODO.md'), 'utf8')).toContain(
+      'SECURITY.md',
+    );
+    expect(await readFile(join(target, 'astro.config.mjs'), 'utf8')).toContain(
+      'adapter: cloudflare()',
+    );
+    expect(
+      JSON.parse(
+        await readFile(join(target, '.vscode/extensions.json'), 'utf8'),
+      ),
+    ).toEqual({
+      recommendations: ['astro-build.astro-vscode'],
+      unwantedRecommendations: [],
+    });
+    expect(await readFile(join(target, '.vscode/mcp.json'), 'utf8')).toContain(
+      'mcp.docs.astro.build',
+    );
+    await expect(
+      readFile(join(target, '.vscode/settings.json'), 'utf8'),
+    ).rejects.toMatchObject({ code: 'ENOENT' });
   });
   it('generates a static project without a deployment adapter', async () => {
     const root = await folder();
@@ -217,6 +262,11 @@ describe('generation', () => {
     );
     await expect(
       readFile(join(target, 'wrangler.jsonc'), 'utf8'),
+    ).rejects.toMatchObject({
+      code: 'ENOENT',
+    });
+    await expect(
+      readFile(join(target, 'src/env.d.ts'), 'utf8'),
     ).rejects.toMatchObject({
       code: 'ENOENT',
     });
@@ -235,6 +285,7 @@ describe('generation', () => {
           issueTemplates: true,
           vitest: true,
           eminenceAstroSuite: true,
+          sitemap: true,
           resend: true,
         },
         frameworks: ['svelte', 'react'],
@@ -243,34 +294,108 @@ describe('generation', () => {
     );
     expect(
       await readFile(join(target, 'src/styles/global.css'), 'utf8'),
-    ).toContain('@import');
+    ).toContain('@import "tailwindcss"');
     expect(
-      await readFile(join(target, 'prettier.config.mjs'), 'utf8'),
-    ).toContain('prettier-plugin-astro');
+      await readFile(join(target, 'src/styles/global.css'), 'utf8'),
+    ).not.toContain('daisyui');
     expect(
-      await readFile(join(target, '.github/workflows/sync-labels.yml'), 'utf8'),
-    ).toContain('actions/github-script');
+      await readFile(join(target, 'src/components/Fonts.astro'), 'utf8'),
+    ).toContain('--astro-font-inter');
+    expect(await readFile(join(target, '.prettierrc'), 'utf8')).toContain(
+      'prettier-plugin-astro',
+    );
+    expect(
+      await readFile(join(target, '.prettierignore'), 'utf8'),
+    ).not.toContain('src/paraglide');
+    expect(await readFile(join(target, '.prettierrc'), 'utf8')).toContain(
+      'prettier-plugin-svelte',
+    );
+    await expect(
+      readFile(join(target, 'prettier.config.mjs'), 'utf8'),
+    ).rejects.toMatchObject({ code: 'ENOENT' });
+    expect(await readFile(join(target, 'svelte.config.js'), 'utf8')).toContain(
+      'vitePreprocess',
+    );
+    expect(await readFile(join(target, 'src/env.d.ts'), 'utf8')).toContain(
+      '@astrojs/cloudflare',
+    );
+    expect(
+      await readFile(join(target, '.github/workflows/labels-sync.yml'), 'utf8'),
+    ).toContain('EndBug/label-sync');
     expect(await readFile(join(target, 'astro.config.mjs'), 'utf8')).toContain(
       'react()',
     );
     expect(await readFile(join(target, 'astro.config.mjs'), 'utf8')).toContain(
       "import eminence from 'eminence-astro-suite'",
     );
+    expect(await readFile(join(target, 'astro.config.mjs'), 'utf8')).toContain(
+      'eminence()',
+    );
+    expect(
+      await readFile(join(target, 'astro.config.mjs'), 'utf8'),
+    ).not.toContain('platformProxy');
+    expect(await readFile(join(target, 'astro.config.mjs'), 'utf8')).toContain(
+      'fontProviders',
+    );
     expect(
       await readFile(join(target, 'src/layouts/BaseLayout.astro'), 'utf8'),
-    ).toContain("import { Head } from 'eminence-astro-suite/components'");
+    ).toContain(
+      'import { Head, type HeadProps } from "eminence-astro-suite/components"',
+    );
+    expect(
+      await readFile(join(target, 'src/layouts/BaseLayout.astro'), 'utf8'),
+    ).toContain('<Fonts />');
+    expect(
+      await readFile(join(target, 'src/layouts/DefaultLayout.astro'), 'utf8'),
+    ).toContain('SkipToContent');
     expect(
       await readFile(join(target, 'src/tests/example.test.ts'), 'utf8'),
-    ).toContain('expect(true).toBe(true)');
+    ).toContain('Example test suite');
+    expect(
+      (
+        JSON.parse(await readFile(join(target, 'package.json'), 'utf8')) as {
+          'lint-staged'?: Record<string, string>;
+          scripts?: Record<string, string>;
+        }
+      )['lint-staged'],
+    ).toEqual({ '*': 'prettier --write' });
+    expect(
+      (
+        JSON.parse(await readFile(join(target, 'package.json'), 'utf8')) as {
+          scripts?: Record<string, string>;
+        }
+      ).scripts?.['github:ci'],
+    ).toBe('pnpm format:check && astro check && pnpm test');
     expect(await readFile(join(target, 'TODO.md'), 'utf8')).toContain(
       'RESEND_API_KEY',
     );
+    expect(await readFile(join(target, 'TODO.md'), 'utf8')).toContain(
+      'LICENSE.md',
+    );
+    expect(await readFile(join(target, 'TODO.md'), 'utf8')).toContain(
+      'SECURITY.md',
+    );
+    expect(await readFile(join(target, 'TODO.md'), 'utf8')).toContain(
+      'CONTRIBUTING.md',
+    );
     expect(
-      await readFile(
-        join(target, '.github/ISSUE_TEMPLATE/bug-report.yml'),
-        'utf8',
-      ),
-    ).toContain('Bug report');
+      await readFile(join(target, '.github/ISSUE_TEMPLATE/feat.md'), 'utf8'),
+    ).toContain('Feature Request (feat)');
+    expect(
+      await readFile(join(target, '.github/PULL_REQUEST_TEMPLATE.md'), 'utf8'),
+    ).toContain('Submission Checklist');
+    expect(
+      await readFile(join(target, '.github/SUPPORT.md'), 'utf8'),
+    ).toContain('Official Technical Documentation');
+    expect(
+      await readFile(join(target, '.vscode/extensions.json'), 'utf8'),
+    ).toContain('esbenp.prettier-vscode');
+    expect(
+      await readFile(join(target, '.vscode/extensions.json'), 'utf8'),
+    ).toContain('vitest.explorer');
+    expect(
+      await readFile(join(target, '.vscode/settings.json'), 'utf8'),
+    ).toContain('prettier.configPath');
   });
   it('creates a static single-language project without Paraglide', async () => {
     const root = await folder();
@@ -282,6 +407,27 @@ describe('generation', () => {
     );
     expect(layout).toContain('<html lang="en">');
     expect(layout).not.toContain('getLocale');
+    expect(layout).toContain('absolutely every route');
+    expect(layout).toMatch(/^---\n\/\/ BaseLayout/m);
+    expect(layout).not.toContain('<!--');
+    expect(
+      await readFile(join(target, 'src/layouts/DefaultLayout.astro'), 'utf8'),
+    ).toContain('most pages');
+    expect(
+      await readFile(join(target, 'src/layouts/DefaultLayout.astro'), 'utf8'),
+    ).not.toContain('<!--');
+    expect(
+      await readFile(join(target, 'src/components/Header.astro'), 'utf8'),
+    ).not.toContain('LanguageSwitcher');
+    expect(
+      await readFile(
+        join(target, 'src/components/SkipToContent.astro'),
+        'utf8',
+      ),
+    ).toContain('Skip to main content');
+    await expect(
+      readFile(join(target, 'src/components/LanguageSwitcher.astro'), 'utf8'),
+    ).rejects.toMatchObject({ code: 'ENOENT' });
     await expect(
       readFile(join(target, 'src/middleware.ts'), 'utf8'),
     ).rejects.toMatchObject({
@@ -320,7 +466,39 @@ describe('generation', () => {
     ).toContain('"baseLocale": "es"');
     expect(
       await readFile(join(target, 'src/pages/index.astro'), 'utf8'),
-    ).toContain('m.home_greeting()');
+    ).toContain('m.index_h1()');
+    expect(
+      await readFile(join(target, 'src/pages/index.astro'), 'utf8'),
+    ).toContain('m.index_title()');
+    expect(
+      await readFile(
+        join(target, 'src/components/LanguageSwitcher.astro'),
+        'utf8',
+      ),
+    ).toContain('esFlagSvg');
+    expect(
+      await readFile(join(target, 'src/components/Header.astro'), 'utf8'),
+    ).toContain('LanguageSwitcher');
+    expect(
+      await readFile(
+        join(target, 'src/components/SkipToContent.astro'),
+        'utf8',
+      ),
+    ).toContain('m.layout_skip_to_content()');
+    expect(await readFile(join(target, 'src/middleware.ts'), 'utf8')).toContain(
+      '@/paraglide/server',
+    );
+    expect(
+      (await readFile(join(target, 'src/middleware.ts'), 'utf8')).startsWith(
+        'import { defineMiddleware }',
+      ),
+    ).toBe(true);
+    expect(await readFile(join(target, 'package.json'), 'utf8')).toContain(
+      'machine-translate',
+    );
+    expect(
+      await readFile(join(target, '.vscode/extensions.json'), 'utf8'),
+    ).toContain('inlang.vs-code-extension');
   });
   it('keeps Paraglide projects static when no adapter is selected', async () => {
     const root = await folder();
@@ -362,11 +540,18 @@ describe('generation', () => {
       { ...skipInstall, git: git as never },
     );
     expect(await readFile(join(target, '.husky/pre-commit'), 'utf8')).toBe(
-      'pnpm format\npnpm test\n',
+      'pnpm exec lint-staged\npnpm test\n',
     );
     expect(
+      (
+        JSON.parse(await readFile(join(target, 'package.json'), 'utf8')) as {
+          'lint-staged'?: Record<string, string>;
+        }
+      )['lint-staged'],
+    ).toEqual({ '*': 'prettier --write' });
+    expect(
       await readFile(join(target, '.github/workflows/ci.yml'), 'utf8'),
-    ).toContain('- run: pnpm test');
+    ).toContain('run: pnpm test');
   });
   it('always installs dependencies', async () => {
     const root = await folder();

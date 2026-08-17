@@ -4,5 +4,29 @@ export const path = '.prettierignore';
 
 export function generate(input: ProjectInput): string | undefined {
   if (!input.improvements.prettier) return;
-  return 'node_modules\ndist\n.astro\n.wrangler\n';
+  return `.husky/*
+.prettierignore
+.gitattributes
+.gitignore
+.npmrc
+.idx/dev.nix
+public/.assetsignore
+LICENSE
+**/*.gitkeep
+**/*.png
+**/*.jpg
+**/*.jpeg
+**/*.gif
+**/*.webp
+**/*.avif
+**/*.mp4
+**/*.mp3
+**/*.woff
+**/*.woff2
+**/*.ttf
+**/*.otf
+**/*.txt
+**/*.pdf
+**/*.example
+`;
 }

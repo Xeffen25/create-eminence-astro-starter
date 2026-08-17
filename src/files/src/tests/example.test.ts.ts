@@ -4,10 +4,20 @@ export const path = 'src/tests/example.test.ts';
 
 export function generate(input: ProjectInput): string | undefined {
   if (!input.improvements.vitest) return;
-  return `import { expect, test } from 'vitest';
+  return `// import ComponentName from "@/components/ComponentName.astro";
+import { describe, expect, it } from "vitest";
 
-test('the starter test passes', () => {
-  expect(true).toBe(true);
+describe("Example test suite", () => {
+  it("Example test case", async () => {
+    /* const container = await experimental_AstroContainer.create();
+		const result = await container.renderToString(Card, {
+			slots: {
+				default: "Card content",
+			},
+		}); */
+
+    expect("").toBe("");
+  });
 });
 `;
 }

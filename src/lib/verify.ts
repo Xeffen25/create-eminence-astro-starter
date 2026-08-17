@@ -1,5 +1,6 @@
 import { execa } from 'execa';
-import type { PackageManager } from '../types.js';
+import { packagesToAdd, usesHusky } from '../files/package.json.js';
+import type { PackageManager, ProjectInput } from '../types.js';
 
 export async function addAstro(directory: string, manager: PackageManager) {
   const args =
@@ -11,13 +12,63 @@ export async function addAstro(directory: string, manager: PackageManager) {
   await execa(manager, args, { cwd: directory });
 }
 
+export function addArgs(
+  manager: PackageManager,
+  packages: string[],
+  development: boolean,
+): string[] {
+  if (manager === 'pnpm')
+    return [
+      'add',
+      ...(development ? ['-D'] : []),
+      '--ignore-workspace',
+      ...packages,
+    ];
+  if (manager === 'npm')
+    return ['install', ...(development ? ['-D'] : []), ...packages];
+  return ['add', ...(development ? ['-D'] : []), ...packages];
+}
+
+export function huskyArgs(manager: PackageManager): string[] {
+  if (manager === 'pnpm') return ['--ignore-workspace', 'husky'];
+  if (manager === 'npm') return ['exec', 'husky'];
+  if (manager === 'bun') return ['x', 'husky'];
+  return ['husky'];
+}
+
+export function installCommands(
+  manager: PackageManager,
+  input: ProjectInput,
+): string[][] {
+  const { dependencies, devDependencies } = packagesToAdd(input);
+  const commands: string[][] = [];
+  if (dependencies.length) commands.push(addArgs(manager, dependencies, false));
+  if (devDependencies.length)
+    commands.push(addArgs(manager, devDependencies, true));
+  if (usesHusky(input)) commands.push(huskyArgs(manager));
+  return commands;
+}
+
 export async function installDependencies(
   directory: string,
   manager: PackageManager,
+  input: ProjectInput,
 ) {
-  const args =
-    manager === 'pnpm' ? ['install', '--ignore-workspace'] : ['install'];
-  await execa(manager, args, { cwd: directory });
+  for (const args of installCommands(manager, input))
+    await execa(manager, args, { cwd: directory });
+}
+
+export function verifyScripts(
+  hasPrettier: boolean,
+  hasVitest: boolean,
+  hasGenerateTypes: boolean,
+) {
+  return [
+    ...(hasGenerateTypes ? ['generate-types'] : []),
+    'build',
+    ...(hasPrettier ? ['format'] : []),
+    ...(hasVitest ? ['test'] : []),
+  ];
 }
 
 export async function verifyProject(
@@ -25,6 +76,7 @@ export async function verifyProject(
   manager: PackageManager,
   hasPrettier: boolean,
   hasVitest: boolean,
+  hasGenerateTypes = false,
 ) {
   const run = async (script: string) =>
     execa(
@@ -36,7 +88,6 @@ export async function verifyProject(
           : [script],
       { cwd: directory },
     );
-  await run('build');
-  if (hasPrettier) await run('format');
-  if (hasVitest) await run('test');
+  for (const script of verifyScripts(hasPrettier, hasVitest, hasGenerateTypes))
+    await run(script);
 }

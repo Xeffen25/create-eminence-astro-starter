@@ -7,6 +7,7 @@ export type Improvements = {
   issueTemplates: boolean;
   vitest: boolean;
   eminenceAstroSuite: boolean;
+  sitemap: boolean;
   resend: boolean;
 };
 
@@ -28,6 +29,8 @@ export type Answers = {
   language: LanguageSetup;
   git: boolean;
   packageManager: PackageManager;
+  site: string;
+  workersDev: boolean;
 };
 
 export type ProjectInput = Answers & {

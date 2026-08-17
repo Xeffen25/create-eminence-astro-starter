@@ -1,0 +1,29 @@
+import type { ProjectInput } from '../../../types.js';
+
+export const path = 'src/layouts/DefaultLayout.astro';
+
+export function generate(_input: ProjectInput): string {
+  return `---
+// DefaultLayout builds on BaseLayout with the chrome most pages share.
+import type { ComponentProps } from "astro/types";
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import SkipToContent from "@/components/SkipToContent.astro";
+import Header from "@/components/Header.astro";
+import Footer from "@/components/Footer.astro";
+
+interface Props extends ComponentProps<typeof BaseLayout> {}
+---
+
+<BaseLayout {...Astro.props}>
+  <slot name="head" slot="head" />
+  <slot name="body-start" slot="body-start" />
+  <slot name="body-end" slot="body-end" />
+  <SkipToContent />
+  <Header />
+  <main id="main" tabindex="-1">
+    <slot />
+  </main>
+  <Footer />
+</BaseLayout>
+`;
+}
