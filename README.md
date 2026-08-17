@@ -30,4 +30,6 @@ When selected, `.github/labels.json` is the source of truth for its listed label
 
 Install with `pnpm install`, then run `pnpm build`, `pnpm test`, and `pnpm format:check`. Add release notes with `pnpm changeset`.
 
-The release workflow uses Changesets to create a release PR. After that PR merges to `main`, it publishes to public npm. Configure an npm automation token as the repository secret `NPM_TOKEN`; the workflow also needs the default `GITHUB_TOKEN` permissions shown in `.github/workflows/release.yml`.
+The release workflow uses Changesets to create a release PR. After that PR merges to `main`, it publishes to public npm. Configure an npm automation token as the repository secret `NPM_TOKEN`.
+
+`GITHUB_TOKEN` can open that PR only if the repository allows it: **Settings → Actions → General → Workflow permissions → Allow GitHub Actions to create and approve pull requests**. Enable that checkbox, then re-run the failed Release workflow. Direct link: https://github.com/Xeffen25/create-eminence-astro-starter/settings/actions
