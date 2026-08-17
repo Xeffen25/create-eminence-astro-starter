@@ -14,6 +14,7 @@ import {
   type PackageJson,
   updatePackageJson,
 } from '../src/lib/package-json.js';
+import { pnpmWorkspaceYaml } from '../src/package-manager.js';
 import { generateProject, templateDirectory } from '../src/scaffold.js';
 import type { Answers } from '../src/types.js';
 
@@ -53,6 +54,7 @@ const skipInstall = {
   addAstro,
   install: async () => {},
   verify: async () => {},
+  compatibilityDate: '2020-01-01',
 };
 afterEach(async () =>
   Promise.all(
@@ -139,14 +141,66 @@ describe('generation', () => {
     await expect(
       readFile(join(target, 'public/.assetsignore'), 'utf8'),
     ).rejects.toMatchObject({ code: 'ENOENT' });
+    expect(
+      await readFile(join(target, 'pnpm-workspace.yaml'), 'utf8'),
+    ).toContain('allowBuilds:');
+  });
+  it('writes pnpm-workspace.yaml only when the package manager is pnpm', async () => {
+    const root = await folder();
+    const pnpm = join(root, 'pnpm-site');
+    await generateProject(pnpm, base, skipInstall);
+    expect(await readFile(join(pnpm, 'pnpm-workspace.yaml'), 'utf8')).toBe(
+      pnpmWorkspaceYaml,
+    );
+    for (const manager of ['npm', 'yarn', 'bun'] as const) {
+      const target = join(root, `${manager}-site`);
+      await generateProject(
+        target,
+        { ...base, packageManager: manager },
+        skipInstall,
+      );
+      await expect(
+        readFile(join(target, 'pnpm-workspace.yaml'), 'utf8'),
+      ).rejects.toMatchObject({ code: 'ENOENT' });
+    }
+  });
+  it('always writes the strict tsconfig with path aliases', async () => {
+    const expected = {
+      extends: 'astro/tsconfigs/strict',
+      include: ['.astro/types.d.ts', '**/*', './worker-configuration.d.ts'],
+      exclude: ['dist'],
+      compilerOptions: {
+        types: ['./worker-configuration.d.ts'],
+        paths: {
+          '@/*': ['./src/*'],
+          '~/*': ['./public/*'],
+        },
+        verbatimModuleSyntax: true,
+      },
+    };
+    const root = await folder();
+    const cloudflare = join(root, 'cloudflare');
+    const staticSite = join(root, 'static');
+    await generateProject(cloudflare, base, skipInstall);
+    await generateProject(
+      staticSite,
+      { ...base, adapter: 'none' },
+      skipInstall,
+    );
+    expect(
+      JSON.parse(await readFile(join(cloudflare, 'tsconfig.json'), 'utf8')),
+    ).toEqual(expected);
+    expect(
+      JSON.parse(await readFile(join(staticSite, 'tsconfig.json'), 'utf8')),
+    ).toEqual(expected);
   });
   it('generates a minimal project', async () => {
     const root = await folder();
     const target = join(root, 'my-site');
     await generateProject(target, base, skipInstall);
-    expect(await readFile(join(target, 'wrangler.jsonc'), 'utf8')).toContain(
-      '@astrojs/cloudflare/entrypoints/server',
-    );
+    const wrangler = await readFile(join(target, 'wrangler.jsonc'), 'utf8');
+    expect(wrangler).toContain('@astrojs/cloudflare/entrypoints/server');
+    expect(wrangler).toContain('"compatibility_date": "2020-01-01"');
     expect(await readFile(join(target, 'package.json'), 'utf8')).toContain(
       'wrangler',
     );

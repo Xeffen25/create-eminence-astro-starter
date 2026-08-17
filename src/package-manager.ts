@@ -11,6 +11,12 @@ export function detectPackageManager(
   return undefined;
 }
 
+export const pnpmWorkspaceYaml = `ignoreScripts: true
+allowBuilds:
+  esbuild: true
+  workerd: true
+`;
+
 export function commandsFor(manager: PackageManager, projectName: string) {
   const run = (script: string) =>
     manager === 'npm' ? `npm run ${script}` : `${manager} ${script}`;

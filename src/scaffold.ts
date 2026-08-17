@@ -21,6 +21,7 @@ import {
   writeNewFile,
 } from './lib/files.js';
 import { addAstro, installDependencies, verifyProject } from './lib/verify.js';
+import { pnpmWorkspaceYaml } from './package-manager.js';
 import type { Answers, Reporter } from './types.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -75,6 +76,7 @@ export async function generateProject(
     verify?: typeof verifyProject;
     git?: typeof execa;
     reporter?: Reporter;
+    compatibilityDate?: string;
   } = {},
 ) {
   const report = options.reporter ?? silentReporter;
@@ -85,6 +87,8 @@ export async function generateProject(
     join(target, 'package.json'),
     basePackageJson(answers.projectName),
   );
+  if (answers.packageManager === 'pnpm')
+    await writeNewFile(join(target, 'pnpm-workspace.yaml'), pnpmWorkspaceYaml);
   await (options.addAstro ?? addAstro)(target, answers.packageManager);
   report.stop('Initiated base project');
   const git = options.git ?? execa;
@@ -108,7 +112,7 @@ export async function generateProject(
   );
   if (answers.adapter === 'cloudflare') {
     report.message('Applying Cloudflare Workers');
-    await addCloudflare(target, answers.projectName);
+    await addCloudflare(target, answers.projectName, options.compatibilityDate);
   }
   for (const framework of answers.frameworks)
     report.message(`Applying ${frameworkLabels[framework]}`);

@@ -1,4 +1,5 @@
 import { join } from 'node:path';
+import { latestWranglerCompatibilityDate } from './lib/compatibility-date.js';
 import { appendUniqueLines, writeNewFile } from './lib/files.js';
 import {
   addDependencies,
@@ -6,10 +7,12 @@ import {
   updatePackageJson,
 } from './lib/package-json.js';
 
-// Updated deliberately when Cloudflare changes the supported compatibility date.
-export const COMPATIBILITY_DATE = '2026-08-11';
-
-export async function addCloudflare(directory: string, projectName: string) {
+export async function addCloudflare(
+  directory: string,
+  projectName: string,
+  compatibilityDate?: string,
+) {
+  const date = compatibilityDate ?? (await latestWranglerCompatibilityDate());
   await updatePackageJson(directory, (pkg) => {
     addDependencies(pkg, {
       '@astrojs/cloudflare': 'latest',
@@ -27,14 +30,14 @@ export async function addCloudflare(directory: string, projectName: string) {
   await writeNewFile(
     join(directory, 'wrangler.jsonc'),
     `{
-  "$schema": "./node_modules/wrangler/config-schema.json",
+  "$schema": "node_modules/wrangler/config-schema.json",
   "name": ${JSON.stringify(projectName)},
   "main": "@astrojs/cloudflare/entrypoints/server",
-  "compatibility_date": "${COMPATIBILITY_DATE}",
-  "compatibility_flags": ["nodejs_compat"],
+  "compatibility_date": "${date}",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "assets": {
+    "binding": "ASSETS",
     "directory": "./dist",
-    "binding": "ASSETS"
   },
   "observability": {
     "enabled": true
