@@ -431,6 +431,21 @@ describe('file generators', () => {
     expect(generateIndex(localized)).toContain('m.index_description()');
     expect(generateBaseLayout(localized)).toContain('HeadProps');
     expect(generateBaseLayout(localized)).toContain('{...Astro.props}');
+    expect(generateBaseLayout(localized)).toContain('deLocalizeHref');
+    expect(generateBaseLayout(localized)).toContain('locales.map((locale)');
+    expect(generateBaseLayout(localized)).toContain(
+      'localizeHref(basePath, { locale })',
+    );
+    expect(generateBaseLayout(localized)).toContain('"x-default"');
+    expect(generateBaseLayout(localized)).toContain(
+      'languageAlternates={languageAlternates}',
+    );
+    expect(
+      generateBaseLayout(input({ language: { paraglide: true } })),
+    ).not.toContain('languageAlternates');
+    expect(
+      generateBaseLayout(input({ improvements: { eminenceAstroSuite: true } })),
+    ).not.toContain('languageAlternates');
   });
   it('puts layout comments in frontmatter before imports', () => {
     const baseLayout = generateBaseLayout(input());
