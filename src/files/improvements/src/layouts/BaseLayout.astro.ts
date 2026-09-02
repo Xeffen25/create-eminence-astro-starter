@@ -12,7 +12,17 @@ export function generate(input: ProjectInput): string {
       'import { Head, type HeadProps } from "eminence-astro-suite/components";',
     );
   if (input.language.paraglide)
-    imports.push('import { getLocale } from "@/paraglide/runtime";');
+    imports.push(
+      input.improvements.eminenceAstroSuite
+        ? `import {
+  baseLocale,
+  deLocalizeHref,
+  getLocale,
+  locales,
+  localizeHref,
+} from "@/paraglide/runtime";`
+        : 'import { getLocale } from "@/paraglide/runtime";',
+    );
   const languageAttribute = input.language.paraglide
     ? '{getLocale()}'
     : JSON.stringify(input.language.defaultLanguage);
@@ -23,8 +33,25 @@ export function generate(input: ProjectInput): string {
   description?: string;
 }
 const { title, description } = Astro.props;`;
+  const languageAlternates =
+    input.improvements.eminenceAstroSuite && input.language.paraglide
+      ? `
+
+const basePath = deLocalizeHref(Astro.url.pathname);
+const origin = Astro.site ?? Astro.url.origin;
+const languageAlternates = Object.fromEntries([
+  ...locales.map((locale) => [
+    locale,
+    new URL(localizeHref(basePath, { locale }), origin),
+  ]),
+  [
+    "x-default",
+    new URL(localizeHref(basePath, { locale: baseLocale }), origin),
+  ],
+]);`
+      : '';
   const head = input.improvements.eminenceAstroSuite
-    ? `<Head {...Astro.props}>
+    ? `<Head {...Astro.props}${input.language.paraglide ? ' languageAlternates={languageAlternates}' : ''}>
     <Fonts />
     <slot name="head" />
   </Head>`
@@ -40,7 +67,7 @@ const { title, description } = Astro.props;`;
 // BaseLayout is the document shell loaded on absolutely every route.
 ${imports.join('\n')}
 
-${props}
+${props}${languageAlternates}
 ---
 
 <!doctype html>

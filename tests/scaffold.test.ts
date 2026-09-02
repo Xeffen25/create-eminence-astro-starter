@@ -482,6 +482,34 @@ describe('generation', () => {
       await readFile(join(target, '.vscode/extensions.json'), 'utf8'),
     ).toContain('inlang.vs-code-extension');
   });
+  it('adds Paraglide language alternates to the Eminence head', async () => {
+    const root = await folder();
+    const target = join(root, 'my-site');
+    await generateProject(
+      target,
+      {
+        ...base,
+        improvements: {
+          ...base.improvements,
+          eminenceAstroSuite: true,
+        },
+        language: {
+          paraglide: true,
+          languages: ['en', 'es'],
+          defaultLanguage: 'en',
+        },
+      },
+      skipInstall,
+    );
+    const layout = await readFile(
+      join(target, 'src/layouts/BaseLayout.astro'),
+      'utf8',
+    );
+    expect(layout).toContain('deLocalizeHref(Astro.url.pathname)');
+    expect(layout).toContain('localizeHref(basePath, { locale })');
+    expect(layout).toContain('"x-default"');
+    expect(layout).toContain('languageAlternates={languageAlternates}');
+  });
   it('keeps Paraglide on the Cloudflare server output', async () => {
     const root = await folder();
     const target = join(root, 'my-site');
