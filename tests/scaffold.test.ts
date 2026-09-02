@@ -8,7 +8,7 @@ import {
   ensureEmptyDirectory,
   isNonEmptyDirectory,
 } from '../src/lib/files.js';
-import { generate as generatePnpmWorkspace } from '../src/files/pnpm-workspace.yaml.js';
+import { generate as generatePnpmWorkspace } from '../src/files/cloudflare/pnpm-workspace.yaml.js';
 import {
   addDependencies,
   addScripts,
@@ -37,7 +37,6 @@ const base: Answers = {
     sitemap: false,
     resend: false,
   },
-  adapter: 'cloudflare',
   frameworks: [],
   language: {
     paraglide: false,
@@ -55,6 +54,7 @@ async function addAstro(directory: string) {
 }
 const skipInstall = {
   addAstro,
+  installCloudflare: async () => {},
   install: async () => {},
   verify: async () => {},
   compatibilityDate: '2020-01-01',
@@ -114,7 +114,7 @@ describe('generation', () => {
     ).toContain('node_modules/');
     const root = await folder();
     const target = join(root, 'my-site');
-    await generateProject(target, { ...base, adapter: 'none' }, skipInstall);
+    await generateProject(target, base, skipInstall);
     expect(
       await readFile(join(target, 'public/favicon.svg'), 'utf8'),
     ).toContain('viewBox="0 0 128 128"');
@@ -149,9 +149,9 @@ describe('generation', () => {
     expect(pkg.version).toBe('1.0.0');
     expect(pkg.dependencies?.astro).toBe('^7.2.2');
     expect(pkg.devDependencies?.astro).toBeUndefined();
-    await expect(
-      readFile(join(target, 'public/.assetsignore'), 'utf8'),
-    ).rejects.toMatchObject({ code: 'ENOENT' });
+    expect(
+      await readFile(join(target, 'public/.assetsignore'), 'utf8'),
+    ).toContain('_worker.js');
     expect(
       await readFile(join(target, 'pnpm-workspace.yaml'), 'utf8'),
     ).toContain('allowBuilds:');
@@ -190,19 +190,19 @@ describe('generation', () => {
       },
     };
     const root = await folder();
-    const cloudflare = join(root, 'cloudflare');
-    const staticSite = join(root, 'static');
-    await generateProject(cloudflare, base, skipInstall);
-    await generateProject(
-      staticSite,
-      { ...base, adapter: 'none' },
-      skipInstall,
-    );
+    const target = join(root, 'cloudflare');
+    await generateProject(target, base, skipInstall);
     expect(
-      JSON.parse(await readFile(join(cloudflare, 'tsconfig.json'), 'utf8')),
-    ).toEqual(expected);
+      JSON.parse(
+        await readFile(join(templateDirectory, 'tsconfig.json'), 'utf8'),
+      ),
+    ).toEqual({
+      extends: 'astro/tsconfigs/strict',
+      include: ['.astro/types.d.ts', '**/*'],
+      exclude: ['dist'],
+    });
     expect(
-      JSON.parse(await readFile(join(staticSite, 'tsconfig.json'), 'utf8')),
+      JSON.parse(await readFile(join(target, 'tsconfig.json'), 'utf8')),
     ).toEqual(expected);
   });
   it('generates a minimal project', async () => {
@@ -252,24 +252,6 @@ describe('generation', () => {
     await expect(
       readFile(join(target, '.vscode/settings.json'), 'utf8'),
     ).rejects.toMatchObject({ code: 'ENOENT' });
-  });
-  it('generates a static project without a deployment adapter', async () => {
-    const root = await folder();
-    const target = join(root, 'my-site');
-    await generateProject(target, { ...base, adapter: 'none' }, skipInstall);
-    expect(await readFile(join(target, 'astro.config.mjs'), 'utf8')).toContain(
-      'output: "static"',
-    );
-    await expect(
-      readFile(join(target, 'wrangler.jsonc'), 'utf8'),
-    ).rejects.toMatchObject({
-      code: 'ENOENT',
-    });
-    await expect(
-      readFile(join(target, 'src/env.d.ts'), 'utf8'),
-    ).rejects.toMatchObject({
-      code: 'ENOENT',
-    });
   });
   it('generates every optional feature', async () => {
     const root = await folder();
@@ -397,7 +379,7 @@ describe('generation', () => {
       await readFile(join(target, '.vscode/settings.json'), 'utf8'),
     ).toContain('prettier.configPath');
   });
-  it('creates a static single-language project without Paraglide', async () => {
+  it('creates a single-language project without Paraglide', async () => {
     const root = await folder();
     const target = join(root, 'my-site');
     await generateProject(target, base, skipInstall);
@@ -500,14 +482,13 @@ describe('generation', () => {
       await readFile(join(target, '.vscode/extensions.json'), 'utf8'),
     ).toContain('inlang.vs-code-extension');
   });
-  it('keeps Paraglide projects static when no adapter is selected', async () => {
+  it('keeps Paraglide on the Cloudflare server output', async () => {
     const root = await folder();
     const target = join(root, 'my-site');
     await generateProject(
       target,
       {
         ...base,
-        adapter: 'none',
         language: {
           paraglide: true,
           languages: ['en', 'fr'],
@@ -517,9 +498,9 @@ describe('generation', () => {
       skipInstall,
     );
     const config = await readFile(join(target, 'astro.config.mjs'), 'utf8');
-    expect(config).toContain('output: "static"');
-    expect(config).toContain('defaultLocale: "fr"');
-    expect(config).toContain('locales: ["en","fr"]');
+    expect(config).toContain('output: "server"');
+    expect(config).toContain('adapter: cloudflare()');
+    expect(config).not.toContain('defaultLocale');
     expect(config).toContain('paraglideVitePlugin');
   });
   it('adds Vitest to CI and the Git pre-commit hook', async () => {
@@ -553,13 +534,16 @@ describe('generation', () => {
       await readFile(join(target, '.github/workflows/ci.yml'), 'utf8'),
     ).toContain('run: pnpm test');
   });
-  it('always installs dependencies', async () => {
+  it('always installs Cloudflare then remaining dependencies', async () => {
     const root = await folder();
+    const installCloudflare = vi.fn();
     const install = vi.fn();
     await generateProject(join(root, 'my-site'), base, {
       ...skipInstall,
+      installCloudflare,
       install,
     });
+    expect(installCloudflare).toHaveBeenCalledOnce();
     expect(install).toHaveBeenCalledOnce();
   });
   it('preserves files when installation fails', async () => {
@@ -577,7 +561,7 @@ describe('generation', () => {
       'my-site',
     );
   });
-  it('runs add Astro, install, and verification in order', async () => {
+  it('runs add Astro, Cloudflare install, remaining install, and verification in order', async () => {
     const root = await folder();
     const target = join(root, 'my-site');
     const order: string[] = [];
@@ -589,6 +573,9 @@ describe('generation', () => {
         order.push('addAstro');
         await addAstro(directory);
       },
+      installCloudflare: async () => {
+        order.push('installCloudflare');
+      },
       install: async (path) => {
         order.push('install');
         const pkg = JSON.parse(
@@ -598,7 +585,12 @@ describe('generation', () => {
       },
       verify,
     });
-    expect(order).toEqual(['addAstro', 'install', 'verify']);
+    expect(order).toEqual([
+      'addAstro',
+      'installCloudflare',
+      'install',
+      'verify',
+    ]);
   });
   it('reports generation as labeled steps', async () => {
     const root = await folder();
@@ -625,14 +617,35 @@ describe('generation', () => {
       'stop:Initiated base project',
       'start:Creating first commit',
       'stop:First commit',
+      'start:Configuring Cloudflare',
+      'stop:Configured Cloudflare',
+      'start:Creating second commit',
+      'stop:Second commit',
       'start:Applying improvements',
       'message:Applying improved template',
       'message:Writing files',
       'stop:Applied improvements',
       'start:Installing dependencies',
       'stop:Installed dependencies',
-      'start:Creating second commit',
-      'stop:Second commit',
+      'start:Creating third commit',
+      'stop:Third commit',
+    ]);
+  });
+  it('creates three setup commits when Git is selected', async () => {
+    const root = await folder();
+    const git = vi.fn(async () => undefined);
+    await generateProject(
+      join(root, 'my-site'),
+      { ...base, git: true },
+      { ...skipInstall, git: git as never },
+    );
+    const messages = git.mock.calls
+      .filter((call) => call[1]?.[0] === 'commit')
+      .map((call) => call[1]?.[call[1].indexOf('-m') + 1]);
+    expect(messages).toEqual([
+      'Initialize Astro',
+      'Configure Cloudflare',
+      'Apply improvements',
     ]);
   });
 });

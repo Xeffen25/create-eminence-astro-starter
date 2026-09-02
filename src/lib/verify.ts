@@ -1,5 +1,12 @@
 import { execa } from 'execa';
-import { packagesToAdd, usesHusky } from '../files/package.json.js';
+import {
+  cloudflareDependencies,
+  cloudflareDevDependencies,
+} from '../files/cloudflare/package.json.js';
+import {
+  packagesToAdd,
+  usesHusky,
+} from '../files/improvements/package.json.js';
 import type { PackageManager, ProjectInput } from '../types.js';
 
 export async function addAstro(directory: string, manager: PackageManager) {
@@ -36,6 +43,13 @@ export function huskyArgs(manager: PackageManager): string[] {
   return ['husky'];
 }
 
+export function cloudflareInstallCommands(manager: PackageManager): string[][] {
+  return [
+    addArgs(manager, cloudflareDependencies, false),
+    addArgs(manager, cloudflareDevDependencies, true),
+  ];
+}
+
 export function installCommands(
   manager: PackageManager,
   input: ProjectInput,
@@ -49,6 +63,14 @@ export function installCommands(
   return commands;
 }
 
+export async function installCloudflare(
+  directory: string,
+  manager: PackageManager,
+) {
+  for (const args of cloudflareInstallCommands(manager))
+    await execa(manager, args, { cwd: directory });
+}
+
 export async function installDependencies(
   directory: string,
   manager: PackageManager,
@@ -58,13 +80,9 @@ export async function installDependencies(
     await execa(manager, args, { cwd: directory });
 }
 
-export function verifyScripts(
-  hasPrettier: boolean,
-  hasVitest: boolean,
-  hasGenerateTypes: boolean,
-) {
+export function verifyScripts(hasPrettier: boolean, hasVitest: boolean) {
   return [
-    ...(hasGenerateTypes ? ['generate-types'] : []),
+    'generate-types',
     'build',
     ...(hasPrettier ? ['format'] : []),
     ...(hasVitest ? ['test'] : []),
@@ -76,7 +94,6 @@ export async function verifyProject(
   manager: PackageManager,
   hasPrettier: boolean,
   hasVitest: boolean,
-  hasGenerateTypes = false,
 ) {
   const run = async (script: string) =>
     execa(
@@ -88,6 +105,5 @@ export async function verifyProject(
           : [script],
       { cwd: directory },
     );
-  for (const script of verifyScripts(hasPrettier, hasVitest, hasGenerateTypes))
-    await run(script);
+  for (const script of verifyScripts(hasPrettier, hasVitest)) await run(script);
 }

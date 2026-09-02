@@ -1,6 +1,5 @@
 import { chmod, mkdir, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
-import { files } from '../files/index.js';
 import type { FileModule, ProjectInput } from '../types.js';
 import {
   mergePackageJson,
@@ -33,7 +32,11 @@ async function writePackageJson(directory: string, contents: string) {
   await writeFile(path, `${JSON.stringify(merged, null, 2)}\n`, 'utf8');
 }
 
-export async function applyFiles(directory: string, input: ProjectInput) {
+export async function applyFiles(
+  directory: string,
+  files: FileModule[],
+  input: ProjectInput,
+) {
   for (const file of files) {
     const contents = file.generate(input);
     if (contents === undefined) continue;

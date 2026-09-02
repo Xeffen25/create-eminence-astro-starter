@@ -2,32 +2,32 @@ import { describe, expect, it } from 'vitest';
 import {
   generate as generatePackageJson,
   packagesToAdd,
-} from '../src/files/package.json.js';
-import { generate as generatePrettierRc } from '../src/files/prettierrc.js';
-import { generate as generateSvelteConfig } from '../src/files/svelte.config.js';
-import { generate as generateEnvDts } from '../src/files/src/env.d.ts.js';
-import { generate as generateCss } from '../src/files/src/styles/global.css.js';
-import { generate as generateWrangler } from '../src/files/wrangler.jsonc.js';
-import { generate as generateTodo } from '../src/files/TODO.md.js';
-import { generate as generateHusky } from '../src/files/.husky/pre-commit.js';
-import { generate as generateAstroConfig } from '../src/files/astro.config.mjs.js';
-import { generate as generateMiddleware } from '../src/files/src/middleware.ts.js';
-import { generate as generatePrettierIgnore } from '../src/files/.prettierignore.js';
-import { generate as generateHeader } from '../src/files/src/components/Header.astro.js';
-import { generate as generateLanguageSwitcher } from '../src/files/src/components/LanguageSwitcher.astro.js';
-import { generate as generateSkipToContent } from '../src/files/src/components/SkipToContent.astro.js';
-import { generate as generateBaseLayout } from '../src/files/src/layouts/BaseLayout.astro.js';
-import { generate as generateDefaultLayout } from '../src/files/src/layouts/DefaultLayout.astro.js';
-import { generate as generateIndex } from '../src/files/src/pages/index.astro.js';
-import { generate as generateVscodeExtensions } from '../src/files/.vscode/extensions.json.js';
-import { generate as generateVscodeMcp } from '../src/files/.vscode/mcp.json.js';
-import { generate as generateVscodeSettings } from '../src/files/.vscode/settings.json.js';
-import { generate as generateCi } from '../src/files/.github/workflows/ci.yml.js';
-import { generate as generateLabelsSync } from '../src/files/.github/workflows/labels-sync.yml.js';
-import { generate as generateLabels } from '../src/files/.github/labels.json.js';
-import { generate as generateFeat } from '../src/files/.github/ISSUE_TEMPLATE/feat.md.js';
-import { generate as generateSupport } from '../src/files/.github/SUPPORT.md.js';
-import { generate as generatePullRequest } from '../src/files/.github/PULL_REQUEST_TEMPLATE.md.js';
+} from '../src/files/improvements/package.json.js';
+import { generate as generatePrettierRc } from '../src/files/improvements/prettierrc.js';
+import { generate as generateSvelteConfig } from '../src/files/improvements/svelte.config.js';
+import { generate as generateEnvDts } from '../src/files/cloudflare/src/env.d.ts.js';
+import { generate as generateCss } from '../src/files/improvements/src/styles/global.css.js';
+import { generate as generateWrangler } from '../src/files/cloudflare/wrangler.jsonc.js';
+import { generate as generateTodo } from '../src/files/improvements/TODO.md.js';
+import { generate as generateHusky } from '../src/files/improvements/.husky/pre-commit.js';
+import { generate as generateAstroConfig } from '../src/files/improvements/astro.config.mjs.js';
+import { generate as generateMiddleware } from '../src/files/improvements/src/middleware.ts.js';
+import { generate as generatePrettierIgnore } from '../src/files/improvements/.prettierignore.js';
+import { generate as generateHeader } from '../src/files/improvements/src/components/Header.astro.js';
+import { generate as generateLanguageSwitcher } from '../src/files/improvements/src/components/LanguageSwitcher.astro.js';
+import { generate as generateSkipToContent } from '../src/files/improvements/src/components/SkipToContent.astro.js';
+import { generate as generateBaseLayout } from '../src/files/improvements/src/layouts/BaseLayout.astro.js';
+import { generate as generateDefaultLayout } from '../src/files/improvements/src/layouts/DefaultLayout.astro.js';
+import { generate as generateIndex } from '../src/files/improvements/src/pages/index.astro.js';
+import { generate as generateVscodeExtensions } from '../src/files/improvements/.vscode/extensions.json.js';
+import { generate as generateVscodeMcp } from '../src/files/improvements/.vscode/mcp.json.js';
+import { generate as generateVscodeSettings } from '../src/files/improvements/.vscode/settings.json.js';
+import { generate as generateCi } from '../src/files/improvements/.github/workflows/ci.yml.js';
+import { generate as generateLabelsSync } from '../src/files/improvements/.github/workflows/labels-sync.yml.js';
+import { generate as generateLabels } from '../src/files/improvements/.github/labels.json.js';
+import { generate as generateFeat } from '../src/files/improvements/.github/ISSUE_TEMPLATE/feat.md.js';
+import { generate as generateSupport } from '../src/files/improvements/.github/SUPPORT.md.js';
+import { generate as generatePullRequest } from '../src/files/improvements/.github/PULL_REQUEST_TEMPLATE.md.js';
 import { installCommands, verifyScripts } from '../src/lib/verify.js';
 import type { PackageJson } from '../src/lib/package-json.js';
 import type {
@@ -50,7 +50,6 @@ const answers: Answers = {
     sitemap: false,
     resend: false,
   },
-  adapter: 'cloudflare',
   frameworks: [],
   language: {
     paraglide: false,
@@ -81,7 +80,6 @@ function input(
 describe('file generators', () => {
   it('composes package.json scripts and packages from selected flags', () => {
     const full = input({
-      adapter: 'cloudflare',
       frameworks: ['react'],
       git: true,
       improvements: {
@@ -114,7 +112,6 @@ describe('file generators', () => {
       dependencies: [
         'eminence-astro-suite',
         'resend',
-        '@astrojs/cloudflare',
         '@astrojs/react',
         'react',
         'react-dom',
@@ -127,7 +124,6 @@ describe('file generators', () => {
         'typescript',
         '@types/node',
         'schema-dts',
-        'wrangler',
         'prettier',
         'prettier-plugin-astro',
         'prettier-plugin-organize-imports',
@@ -136,21 +132,20 @@ describe('file generators', () => {
         'lint-staged',
       ],
     });
-    const staticPkg = JSON.parse(
-      generatePackageJson(input({ adapter: 'none' })),
-    ) as PackageJson;
-    expect(packagesToAdd(input({ adapter: 'none' })).dependencies).toEqual([]);
-    expect(packagesToAdd(input({ adapter: 'none' })).devDependencies).toEqual([
+    const minimalPkg = JSON.parse(generatePackageJson(input())) as PackageJson;
+    expect(packagesToAdd(input()).dependencies).toEqual([]);
+    expect(packagesToAdd(input()).devDependencies).toEqual([
       '@astrojs/check',
       'typescript',
       '@types/node',
     ]);
-    expect(staticPkg.scripts?.preview).toBe('astro build && astro preview');
-    expect(staticPkg.scripts?.['generate-types']).toBeUndefined();
-    expect(staticPkg.scripts?.prepare).toBeUndefined();
-    expect(staticPkg.scripts?.all).toBe('astro check && pnpm build');
+    expect(minimalPkg.scripts?.preview).toBe('astro build && astro preview');
+    expect(minimalPkg.scripts?.['generate-types']).toBe('wrangler types');
+    expect(minimalPkg.scripts?.prepare).toBeUndefined();
+    expect(minimalPkg.scripts?.all).toBe(
+      'pnpm generate-types && astro check && pnpm build',
+    );
     const svelte = input({
-      adapter: 'none',
       frameworks: ['svelte'],
       improvements: { prettier: true },
     });
@@ -176,13 +171,7 @@ describe('file generators', () => {
       }),
     );
     expect(commands).toEqual([
-      [
-        'add',
-        '--ignore-workspace',
-        '@astrojs/cloudflare',
-        '@astrojs/svelte',
-        'svelte',
-      ],
+      ['add', '--ignore-workspace', '@astrojs/svelte', 'svelte'],
       [
         'add',
         '-D',
@@ -190,7 +179,6 @@ describe('file generators', () => {
         '@astrojs/check',
         'typescript',
         '@types/node',
-        'wrangler',
         'prettier',
         'prettier-plugin-astro',
         'prettier-plugin-organize-imports',
@@ -205,14 +193,12 @@ describe('file generators', () => {
     expect(
       installCommands('npm', input({ improvements: { prettier: true } })),
     ).toEqual([
-      ['install', '@astrojs/cloudflare'],
       [
         'install',
         '-D',
         '@astrojs/check',
         'typescript',
         '@types/node',
-        'wrangler',
         'prettier',
         'prettier-plugin-astro',
         'prettier-plugin-organize-imports',
@@ -239,8 +225,7 @@ describe('file generators', () => {
       ),
     ).toBe('npm exec lint-staged\n');
   });
-  it('skips wrangler.jsonc when the adapter is none', () => {
-    expect(generateWrangler(input({ adapter: 'none' }))).toBeUndefined();
+  it('writes wrangler.jsonc for every project', () => {
     expect(generateWrangler(input())).toContain(
       '"compatibility_date": "2020-01-01"',
     );
@@ -267,9 +252,9 @@ describe('file generators', () => {
         }),
       ),
     ).toContain('"workers_dev": false');
-    expect(
-      generateWrangler(input({ adapter: 'none', site: 'https://example.org' })),
-    ).toBeUndefined();
+    expect(generateWrangler(input({ site: 'https://example.org' }))).toContain(
+      '"pattern": "example.org"',
+    );
   });
   it('keeps the sitemap site TODO only for the example.com placeholder', () => {
     expect(generateTodo(input())).toContain('.github/SECURITY.md');
@@ -348,14 +333,14 @@ describe('file generators', () => {
       ),
     ).not.toContain('// TODO: replace with the production URL');
   });
-  it('runs generate-types before build when verifying Cloudflare projects', () => {
-    expect(verifyScripts(true, true, true)).toEqual([
+  it('runs generate-types before build when verifying projects', () => {
+    expect(verifyScripts(true, true)).toEqual([
       'generate-types',
       'build',
       'format',
       'test',
     ]);
-    expect(verifyScripts(false, false, false)).toEqual(['build']);
+    expect(verifyScripts(false, false)).toEqual(['generate-types', 'build']);
   });
   it('writes svelte.config.js only when Svelte is selected', () => {
     expect(generateSvelteConfig(input())).toBeUndefined();
@@ -363,9 +348,11 @@ describe('file generators', () => {
       'vitePreprocess',
     );
   });
-  it('writes src/env.d.ts only for the Cloudflare adapter', () => {
-    expect(generateEnvDts(input({ adapter: 'none' }))).toBeUndefined();
+  it('writes src/env.d.ts with the Cloudflare runtime', () => {
     expect(generateEnvDts(input())).toContain('@astrojs/cloudflare');
+    expect(generateEnvDts(input())).toContain(
+      'interface Locals extends Runtime',
+    );
   });
   it('writes .prettierrc with Svelte plugin only when Svelte is selected', () => {
     expect(generatePrettierRc(input())).toBeUndefined();
@@ -395,9 +382,7 @@ describe('file generators', () => {
     expect(middleware).toContain('from "@/paraglide/server"');
     expect(middleware).toContain('paraglideMiddleware');
     expect(
-      generateMiddleware(
-        input({ adapter: 'none', language: { paraglide: true } }),
-      ),
+      generateMiddleware(input({ language: { paraglide: true } })),
     ).toContain('@/paraglide/server');
   });
   it('leaves Paraglide ignores to generated ignore files', () => {
@@ -498,16 +483,11 @@ describe('file generators', () => {
     expect(ci).toContain('pnpm astro check');
     expect(ci).toContain('Run tests');
     expect(ci).not.toContain('github:ci');
-    const staticCi = generateCi(
-      input({
-        adapter: 'none',
-        packageManager: 'npm',
-      }),
-    );
-    expect(staticCi).not.toContain('Format check');
-    expect(staticCi).not.toContain('generate-types');
-    expect(staticCi).not.toContain('Run tests');
-    expect(staticCi).toContain('npm run astro -- check');
+    const npmCi = generateCi(input({ packageManager: 'npm' }));
+    expect(npmCi).not.toContain('Format check');
+    expect(npmCi).toContain('generate-types');
+    expect(npmCi).not.toContain('Run tests');
+    expect(npmCi).toContain('npm run astro -- check');
     expect(generateLabelsSync(input())).toBeUndefined();
     expect(
       generateLabelsSync(input({ improvements: { githubLabels: true } })),
@@ -525,38 +505,24 @@ describe('file generators', () => {
     expect(cloudflareLabels.map((label) => label.name)).not.toContain(
       'analytics',
     );
-    const staticLabels = JSON.parse(
+    const localizedLabels = JSON.parse(
       generateLabels(
         input({
-          adapter: 'none',
           improvements: { githubLabels: true, sitemap: true },
           language: { paraglide: true },
         }),
       )!,
     ) as Array<{ name: string }>;
-    expect(staticLabels.map((label) => label.name)).toContain('locale');
-    expect(staticLabels.map((label) => label.name)).toContain('seo');
-    expect(staticLabels.map((label) => label.name)).not.toContain('cloudflare');
+    expect(localizedLabels.map((label) => label.name)).toContain('locale');
+    expect(localizedLabels.map((label) => label.name)).toContain('seo');
+    expect(localizedLabels.map((label) => label.name)).toContain('cloudflare');
     expect(generateFeat(input())).toBeUndefined();
     expect(
       generateFeat(input({ improvements: { issueTemplates: true } })),
     ).toContain('**Cloudflare**');
     expect(
-      generateFeat(
-        input({ adapter: 'none', improvements: { issueTemplates: true } }),
-      ),
-    ).not.toContain('**Cloudflare**');
-    expect(
       generatePullRequest(input({ improvements: { issueTemplates: true } })),
     ).toContain('Staging Preview');
-    expect(
-      generatePullRequest(
-        input({
-          adapter: 'none',
-          improvements: { issueTemplates: true },
-        }),
-      ),
-    ).not.toContain('Staging Preview');
     const support = generateSupport(
       input({
         frameworks: ['svelte'],
@@ -567,13 +533,11 @@ describe('file generators', () => {
     expect(support).toContain('Svelte');
     expect(support).toContain('Paraglide JS');
     expect(support).toContain('Tailwind CSS');
+    expect(support).toContain('Cloudflare Workers');
     expect(support).not.toContain('daisyUI');
     expect(support).not.toContain('ESLint');
-    expect(
-      generateSupport(input({ adapter: 'none', frameworks: ['react'] })),
-    ).toContain('React');
-    expect(generateSupport(input({ adapter: 'none' }))).not.toContain(
-      'Cloudflare Workers',
+    expect(generateSupport(input({ frameworks: ['react'] }))).toContain(
+      'React',
     );
   });
 });

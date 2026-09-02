@@ -6,7 +6,6 @@ import {
   siteOrDefault,
 } from './lib/site.js';
 import type {
-  Adapter,
   Answers,
   Framework,
   Improvements,
@@ -140,21 +139,6 @@ export async function collectAnswers(options: {
         initialValues: Object.keys(defaultImprovements),
       });
   if (cancelled(selected)) return undefined;
-  const adapter = options.yes
-    ? 'cloudflare'
-    : ((await p.select({
-        message: 'Which deployment adapter should be configured?',
-        options: [
-          { value: 'none', label: 'None', hint: 'Static Astro site' },
-          {
-            value: 'cloudflare',
-            label: 'Cloudflare Workers',
-            hint: 'Server-rendered Astro site',
-          },
-        ],
-        initialValue: 'cloudflare',
-      })) as Adapter);
-  if (cancelled(adapter)) return undefined;
   const site = options.yes
     ? defaultSite
     : await p.text({
@@ -165,8 +149,8 @@ export async function collectAnswers(options: {
       });
   if (cancelled(site)) return undefined;
   const siteUrl = siteOrDefault(site);
-  let workersDev = adapter === 'cloudflare' && isDefaultSite(siteUrl);
-  if (adapter === 'cloudflare' && !isDefaultSite(siteUrl) && !options.yes) {
+  let workersDev = isDefaultSite(siteUrl);
+  if (!isDefaultSite(siteUrl) && !options.yes) {
     const workersDevAnswer = await p.confirm({
       message: 'Enable the workers.dev subdomain?',
       initialValue: false,
@@ -256,7 +240,6 @@ export async function collectAnswers(options: {
       sitemap: picks.has('sitemap'),
       resend: picks.has('resend'),
     },
-    adapter,
     frameworks: frameworks as Framework[],
     language: {
       paraglide: Boolean(paraglide),

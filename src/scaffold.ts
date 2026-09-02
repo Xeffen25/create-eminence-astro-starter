@@ -1,7 +1,8 @@
 import { fileURLToPath } from 'node:url';
 import { dirname, join, resolve } from 'node:path';
 import { execa } from 'execa';
-import { generate as generatePnpmWorkspace } from './files/pnpm-workspace.yaml.js';
+import { cloudflareFiles } from './files/cloudflare/index.js';
+import { improvementFiles } from './files/improvements/index.js';
 import { applyFiles } from './lib/apply-files.js';
 import { latestWranglerCompatibilityDate } from './lib/compatibility-date.js';
 import {
@@ -10,7 +11,12 @@ import {
   ensureEmptyDirectory,
   writeNewFile,
 } from './lib/files.js';
-import { addAstro, installDependencies, verifyProject } from './lib/verify.js';
+import {
+  addAstro,
+  installCloudflare,
+  installDependencies,
+  verifyProject,
+} from './lib/verify.js';
 import type { Answers, ProjectInput, Reporter } from './types.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -59,6 +65,7 @@ export async function generateProject(
   answers: Answers,
   options: {
     addAstro?: typeof addAstro;
+    installCloudflare?: typeof installCloudflare;
     install?: typeof installDependencies;
     verify?: typeof verifyProject;
     git?: typeof execa;
@@ -70,10 +77,7 @@ export async function generateProject(
   const input: ProjectInput = {
     ...answers,
     compatibilityDate:
-      options.compatibilityDate ??
-      (answers.adapter === 'cloudflare'
-        ? await latestWranglerCompatibilityDate()
-        : ''),
+      options.compatibilityDate ?? (await latestWranglerCompatibilityDate()),
   };
   await ensureEmptyDirectory(target);
   report.start('Initiating base project');
@@ -82,9 +86,6 @@ export async function generateProject(
     join(target, 'package.json'),
     basePackageJson(answers.projectName),
   );
-  const pnpmWorkspace = generatePnpmWorkspace(input);
-  if (pnpmWorkspace)
-    await writeNewFile(join(target, 'pnpm-workspace.yaml'), pnpmWorkspace);
   await (options.addAstro ?? addAstro)(target, answers.packageManager);
   report.stop('Initiated base project');
   const git = options.git ?? execa;
@@ -94,11 +95,23 @@ export async function generateProject(
     await commit(target, 'Initialize Astro', git);
     report.stop('First commit');
   }
+  report.start('Configuring Cloudflare');
+  await applyFiles(target, cloudflareFiles, input);
+  await (options.installCloudflare ?? installCloudflare)(
+    target,
+    answers.packageManager,
+  );
+  report.stop('Configured Cloudflare');
+  if (answers.git) {
+    report.start('Creating second commit');
+    await commit(target, 'Configure Cloudflare', git);
+    report.stop('Second commit');
+  }
   report.start('Applying improvements');
   report.message('Applying improved template');
   await copyDirectoryContents(improvedTemplateDirectory, target);
   report.message('Writing files');
-  await applyFiles(target, input);
+  await applyFiles(target, improvementFiles, input);
   report.stop('Applied improvements');
   report.start('Installing dependencies');
   await (options.install ?? installDependencies)(
@@ -111,12 +124,11 @@ export async function generateProject(
     answers.packageManager,
     answers.improvements.prettier,
     answers.improvements.vitest,
-    answers.adapter === 'cloudflare',
   );
   report.stop('Installed dependencies');
   if (answers.git) {
-    report.start('Creating second commit');
-    await commit(target, 'Apply setup', git);
-    report.stop('Second commit');
+    report.start('Creating third commit');
+    await commit(target, 'Apply improvements', git);
+    report.stop('Third commit');
   }
 }

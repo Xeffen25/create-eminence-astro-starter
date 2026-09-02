@@ -11,7 +11,6 @@ export type Improvements = {
   resend: boolean;
 };
 
-export type Adapter = 'none' | 'cloudflare';
 export type Framework = 'svelte' | 'react';
 export type Language = 'es' | 'en' | 'fr' | 'it' | 'ca' | 'de';
 
@@ -24,7 +23,6 @@ export type LanguageSetup = {
 export type Answers = {
   projectName: string;
   improvements: Improvements;
-  adapter: Adapter;
   frameworks: Framework[];
   language: LanguageSetup;
   git: boolean;

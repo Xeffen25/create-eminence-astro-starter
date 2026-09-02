@@ -1,0 +1,38 @@
+import type { ProjectInput } from '../../types.js';
+
+export const path = '.gitignore';
+
+export function generate(_input: ProjectInput): string {
+  return `# build output
+dist/
+# generated types
+.astro/
+worker-configuration.d.ts
+
+# dependencies
+node_modules/
+
+# logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+
+# environment variables
+.env
+.env.*
+!.env.example
+
+# macOS-specific files
+.DS_Store
+
+# jetbrains setting folder
+.idea/
+
+# wrangler files
+.wrangler/
+.dev.vars*
+!.dev.vars.example
+`;
+}
